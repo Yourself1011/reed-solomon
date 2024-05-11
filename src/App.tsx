@@ -13,6 +13,7 @@ function App() {
         for (const char of message) {
             p.push(Math.max(char.charCodeAt(0) - 96, 0));
         }
+        const pxs = [...p, 0, 0];
 
         const g = [redundantCharacters == 0 ? 0 : 1];
         const gRoots = [];
@@ -24,17 +25,21 @@ function App() {
             gRoots.push(i * -1);
         }
 
-        const { steps, diffs, quotient } = polyLongDiv(p, g);
+        const { steps, diffs, quotient, remainder } = polyLongDiv(pxs, g);
 
         let polyFormatted = "";
         for (let i = 0; i < steps.length; i++) {
+            // steps[i] = steps[i].slice(i, p.length - g.length + i);
+            // diffs[i] = diffs[i].slice(i, p.length - g.length + i);
             polyFormatted += `${polyText(steps[i], {
-                sup: true,
+                start: i,
+                end: pxs.length - g.length + i - 1,
                 sep: "&",
             })}\\\\
             \\hline
             ${polyText(diffs[i], {
-                sup: true,
+                start: i,
+                end: pxs.length - g.length + i,
                 sep: "&",
             })}\\\\`;
         }
@@ -45,31 +50,33 @@ function App() {
             \\begin{align}
             \\require{enclose}
             &\\text{Message in numbers: }${p.join(", ")} \\\\
-            p(x) &= ${polyText(
-                p
-            )} && \\text{Create a polynomial with those numbers as coefficients} \\\\
-            g(x) &= ${gRoots
-                .map((r) => (r == 0 ? "(x)" : `(x - ${r})`))
-                .join(
-                    ""
-                )} && \\text{Create another polynomial with arbitrary, agreed upon roots of }${gRoots} \\\\
+            &\\text{Create a polynomial with those numbers as coefficients} \\\\
+            p(x) &= ${polyText(p)} \\\\
+            p(x)x^2 &= ${polyText(pxs, { end: pxs.length - 2 })} \\\\
+            &\\text{Create another polynomial with arbitrary, agreed upon roots of }${gRoots} \\\\
+            g(x) &= ${gRoots.map((r) => (r == 0 ? "(x)" : `(x - ${r})`)).join("")} \\\\
                  &= ${polyText(g)} \\\\
                  \\\\
-                 & && \\text{Divide } p(x) \\text{by } g(x)
+                 & \\text{Divide } p(x)x^2 \\text{ by } g(x)
                  \\\\
 
             \\begin{split}
                 ${polyText(g)} ) 
-                ${"\\\\".repeat(steps.length * 2 + 1)}
+                ${"\\\\".repeat(steps.length * 2 + 2)}
             \\end{split}&
             \\begin{split}
-                \\begin{array}{r@{}l}
-                ${polyText(quotient, { sep: "&" })} \\\\
+                \\begin{array}{@{}r}
+                ${"&".repeat(g.length - 1) + polyText(quotient, { sep: "&" })} \\\\
                 \\hline
-                ${polyText(p, { sep: "&" })} \\\\
+                ${polyText(pxs, { sep: "&" })} \\\\
                 ${polyFormatted}
                 \\end{array}
             \\end{split}
+            
+            \\\\\\\\
+            p(x)x^2 &= (${polyText(quotient)})(${polyText(g)}) + \\frac{${polyText(
+            remainder
+        )}}{${polyText(g)}}
             \\end{align}
             $$
         `);
@@ -100,16 +107,21 @@ function App() {
             diffs.push([...diffs[diffs.length - 1]].map((n, i) => n - steps[steps.length - 1][i]));
         }
 
-        return { steps, diffs, quotient };
+        return {
+            steps,
+            diffs,
+            quotient,
+            remainder: diffs[diffs.length - 1].slice(dividend.length - divisor.length + 1),
+        };
     };
 
-    const polyText = (p: number[], options?: { sep?: string; sup?: boolean }) => {
-        const { sep, sup } = options ?? {};
+    const polyText = (p: number[], options?: { sep?: string; start?: number; end?: number }) => {
+        const { sep, start, end } = options ?? {};
         return p
             .map((n, i) =>
-                n == 0 && sup
-                    ? "\\phantom{0}"
-                    : (n >= 0 && i != 0 ? "+" : "") +
+                (start && i < start) || (end && i >= end)
+                    ? ""
+                    : (n >= 0 && i != (start ?? 0) ? "+" : "") +
                       (i == p.length - 1
                           ? n
                           : `${n == 1 ? "" : n == -1 ? "-" : n}x^{${

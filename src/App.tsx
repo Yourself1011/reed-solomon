@@ -11,13 +11,14 @@ function App() {
     const [origSend, setOrigSend] = useState<number[]>([]);
     const [sent, setSent] = useState(false);
     const [decOut, setDecOut] = useState("");
+    const [gRoots, setGRoots] = useState<number[]>([]);
 
     const encode = () => {
         const p = [];
         for (const char of message) {
             p.push(Math.max(char.charCodeAt(0) - 96, 0));
         }
-        const pxs = [...p, 0, 0];
+        const pxs = [...p, ...Array(redundantCharacters).fill(0)];
 
         const g = [1];
         const gRoots = [];
@@ -28,6 +29,7 @@ function App() {
             }
             gRoots.push(-(i - 1));
         }
+        setGRoots(gRoots);
 
         const { steps, diffs, quotient, remainder } = polyLongDiv(pxs, g);
 
@@ -48,7 +50,7 @@ function App() {
             })}\\\\`;
         }
 
-        const f = [...pxs.slice(0, -2), ...[...remainder].map((n) => -n)];
+        const f = [...pxs.slice(0, -redundantCharacters), ...[...remainder].map((n) => -n)];
 
         setSend(f);
         setOrigSend(f);
@@ -60,12 +62,14 @@ function App() {
             &\\text{Message in numbers: }${p.join(", ")} \\\\
             &\\text{Create a polynomial with those numbers as coefficients} \\\\
             p(x) &= ${polyText(p)} \\\\
-            p(x)x^2 &= ${polyText(pxs, { end: pxs.length - 2 })} \\\\
+            p(x)x^${redundantCharacters} &= ${polyText(pxs, {
+            end: pxs.length - redundantCharacters,
+        })} \\\\
             &\\text{Create another polynomial with arbitrary, agreed upon roots of }${gRoots} \\\\
             g(x) &= ${gRoots.map((r) => (r == 0 ? "(x)" : `(x - ${r})`)).join("")} \\\\
                  &= ${polyText(g)} \\\\
                  \\\\
-                 & \\text{Divide } p(x)x^2 \\text{ by } g(x)
+                 & \\text{Divide } p(x)x^${redundantCharacters} \\text{ by } g(x)
                  \\\\
 
             \\begin{split}
@@ -82,14 +86,16 @@ function App() {
             \\end{split}
             
             \\\\\\\\
-            p(x)x^2 &= (${polyText(quotient)})(${polyText(g)}) + \\frac{${polyText(
-            remainder
-        )}}{${polyText(g)}}
+            p(x)x^${redundantCharacters} &= (${polyText(quotient)})(${polyText(
+            g
+        )}) + \\frac{${polyText(remainder)}}{${polyText(g)}}
 
             \\\\
             &\\text{let } f(x) \\text{ be the polynomial we send} \\\\
-            f(x) &= p(x)x^2 - R \\\\
-            &= (${polyText(pxs, { end: pxs.length - 2 })})-(${polyText(remainder)}) \\\\
+            f(x) &= p(x)x^${redundantCharacters} - R \\\\
+            &= (${polyText(pxs, { end: pxs.length - redundantCharacters })})-(${polyText(
+            remainder
+        )}) \\\\
             &= ${polyText(f)}
             \\end{align}
             $$
@@ -146,11 +152,28 @@ function App() {
     };
 
     const decode = () => {
+        const gAtF = [];
+
+        for (const root of gRoots) {
+            gAtF.push(evalPoly(send, root));
+        }
+
         setDecOut(`
             \\begin{align}
-                &\\text{If we received everything correctly, the roots of } g(x) \\text{ should still be in our polynomial}
+                &\\text{If we received everything correctly, the roots of } g(x) \\text{ should still be in our polynomial} \\\\
+                ${gAtF} \\\\
+                ${gRoots}
             \\end{align}
         `);
+    };
+
+    const evalPoly = (p: number[], x: number) => {
+        let sum = 0;
+        for (let i = 0; i < p.length; i++) {
+            sum += p[i] * x ** (p.length - i);
+        }
+
+        return sum;
     };
 
     return (

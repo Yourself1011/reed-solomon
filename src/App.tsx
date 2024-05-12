@@ -10,6 +10,7 @@ function App() {
     const [send, setSend] = useState<number[]>([]);
     const [origSend, setOrigSend] = useState<number[]>([]);
     const [sent, setSent] = useState(false);
+    const [decOut, setDecOut] = useState("");
 
     const encode = () => {
         const p = [];
@@ -36,13 +37,13 @@ function App() {
             // diffs[i] = diffs[i].slice(i, p.length - g.length + i);
             polyFormatted += `${polyText(steps[i], {
                 start: i,
-                end: pxs.length - g.length + i - 1,
+                end: g.length + i,
                 sep: "&",
             })}\\\\
             \\hline
             ${polyText(diffs[i], {
                 start: i,
-                end: pxs.length - g.length + i,
+                end: g.length + i + 1,
                 sep: "&",
             })}\\\\`;
         }
@@ -144,6 +145,14 @@ function App() {
             .join(sep ?? "");
     };
 
+    const decode = () => {
+        setDecOut(`
+            \\begin{align}
+                &\\text{If we received everything correctly, the roots of } g(x) \\text{ should still be in our polynomial}
+            \\end{align}
+        `);
+    };
+
     return (
         <>
             <main className="p-8">
@@ -190,9 +199,10 @@ function App() {
                         <h2>Message to send:</h2>
                         <p className="mb-2">Corrupt some of these numbers</p>
                         <form
-                            className="flex flex-row gap-4"
+                            className="flex flex-row flex-wrap gap-4"
                             onSubmit={(e) => {
                                 e.preventDefault();
+                                decode();
                                 setSent(true);
                             }}
                         >
@@ -224,6 +234,7 @@ function App() {
                 {sent ? (
                     <>
                         <h2>Decoding</h2>
+                        <MathJax className="mt-8 max-w-full">{decOut}</MathJax>
                     </>
                 ) : null}
             </main>

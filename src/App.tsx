@@ -220,6 +220,12 @@ function App() {
                         </form>
                     </>
                 ) : null}
+
+                {sent ? (
+                    <>
+                        <h2>Decoding</h2>
+                    </>
+                ) : null}
             </main>
         </>
     );

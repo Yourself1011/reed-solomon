@@ -4,25 +4,28 @@ import { MathJax } from "better-react-mathjax";
 
 function App() {
     const [on, setOn] = useState(false);
-    const [message, messageBuffer] = useState("");
-    const [redundantCharacters, setRedundantCharacters] = useState<number>(0);
+    const [message, setMessage] = useState("");
+    const [redundantCharacters, setRedundantCharacters] = useState(0);
     const [out, setOut] = useState("");
+    const [send, setSend] = useState<number[]>([]);
+    const [origSend, setOrigSend] = useState<number[]>([]);
+    const [sent, setSent] = useState(false);
 
-    const calculate = () => {
+    const encode = () => {
         const p = [];
         for (const char of message) {
             p.push(Math.max(char.charCodeAt(0) - 96, 0));
         }
         const pxs = [...p, 0, 0];
 
-        const g = [redundantCharacters == 0 ? 0 : 1];
+        const g = [1];
         const gRoots = [];
         for (let i = 0; i > -redundantCharacters; i--) {
             g.push(0);
             for (let j = g.length - 2; j >= 0; j--) {
-                g[j + 1] += g[j] * i;
+                g[j + 1] += g[j] * (i - 1);
             }
-            gRoots.push(i * -1);
+            gRoots.push(-(i - 1));
         }
 
         const { steps, diffs, quotient, remainder } = polyLongDiv(pxs, g);
@@ -44,8 +47,12 @@ function App() {
             })}\\\\`;
         }
 
+        const f = [...pxs.slice(0, -2), ...[...remainder].map((n) => -n)];
+
+        setSend(f);
+        setOrigSend(f);
+
         setOut(`
-            Encoding:
             $$
             \\begin{align}
             \\require{enclose}
@@ -62,7 +69,7 @@ function App() {
 
             \\begin{split}
                 ${polyText(g)} ) 
-                ${"\\\\".repeat(steps.length * 2 + 2)}
+                ${"\\\\".repeat(steps.length * 2.4)}
             \\end{split}&
             \\begin{split}
                 \\begin{array}{@{}r}
@@ -77,6 +84,12 @@ function App() {
             p(x)x^2 &= (${polyText(quotient)})(${polyText(g)}) + \\frac{${polyText(
             remainder
         )}}{${polyText(g)}}
+
+            \\\\
+            &\\text{let } f(x) \\text{ be the polynomial we send} \\\\
+            f(x) &= p(x)x^2 - R \\\\
+            &= (${polyText(pxs, { end: pxs.length - 2 })})-(${polyText(remainder)}) \\\\
+            &= ${polyText(f)}
             \\end{align}
             $$
         `);
@@ -144,8 +157,9 @@ function App() {
                     className="flex flex-row gap-4"
                     onSubmit={(e) => {
                         e.preventDefault();
-                        calculate();
+                        encode();
                         setOn(true);
+                        setSent(false);
                     }}
                 >
                     <input
@@ -153,7 +167,7 @@ function App() {
                         placeholder="Message (only a-z, lowercase)"
                         value={message}
                         onChange={(e) =>
-                            e.target.value.match("[^a-z ]") ? null : messageBuffer(e.target.value)
+                            e.target.value.match("[^a-z ]") ? null : setMessage(e.target.value)
                         }
                     />
                     <input
@@ -168,7 +182,44 @@ function App() {
                     </button>
                 </form>
 
-                <MathJax className="mt-8 max-w-full">{on ? out : null}</MathJax>
+                {on ? (
+                    <>
+                        <h2>Encoding</h2>
+                        <MathJax className="mt-8 max-w-full">{out}</MathJax>
+
+                        <h2>Message to send:</h2>
+                        <p className="mb-2">Corrupt some of these numbers</p>
+                        <form
+                            className="flex flex-row gap-4"
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                setSent(true);
+                            }}
+                        >
+                            {send.map((n, i) => (
+                                <input
+                                    className={`p-4 w-24 rounded-full ${
+                                        n != origSend[i] ? "bg-red-600" : ""
+                                    }`}
+                                    key={i}
+                                    value={n}
+                                    onChange={(e) =>
+                                        setSend([
+                                            ...send.slice(0, i),
+                                            parseInt(e.target.value),
+                                            ...send.slice(i + 1),
+                                        ])
+                                    }
+                                    type="number"
+                                ></input>
+                            ))}
+
+                            <button className="bg-blue-950 p-4 rounded-full" type="submit">
+                                Send!
+                            </button>
+                        </form>
+                    </>
+                ) : null}
             </main>
         </>
     );

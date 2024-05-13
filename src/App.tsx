@@ -221,6 +221,9 @@ function App() {
                 // Gauss-Jordan elimination
                 out += `
                     &\\text{Gauss-Jordan elimination on the first ${maxErrs} equations}\\\\
+                    &\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
+                        ${gj.map((x, j) => x.join("&") + "&" + r[j]).join("\\\\")}
+                    \\end{array} \\right]\\\\
                 `;
 
                 // going down
@@ -236,7 +239,7 @@ function App() {
                     gj[i] = gj[i].map((x) => x / div);
                     r[i] /= div;
                     out += `
-                        &\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
+                        \\sim&\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
                             ${gj.map((x, j) => x.join("&") + "&" + r[j]).join("\\\\")}
                         \\end{array} \\right]\\\\
                     `;
@@ -248,7 +251,7 @@ function App() {
                     }
 
                     out += `
-                        &\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
+                        \\sim&\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
                             ${gj.map((x, j) => x.join("&") + "&" + r[j]).join("\\\\")}
                         \\end{array} \\right]\\\\
                     `;
@@ -263,7 +266,7 @@ function App() {
                     }
 
                     out += `
-                        &\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
+                        \\sim&\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
                             ${gj.map((x, j) => x.join("&") + "&" + r[j]).join("\\\\")}
                         \\end{array} \\right]\\\\
                     `;
@@ -291,8 +294,8 @@ function App() {
 
                 out += works
                     ? `
-                    &\\text{Those ${maxErrs} equations agree, so these are the correct roots!} \\\\
-                    &\\text{We'll check the rest of the possibilities for completeness' sake} \\\\
+                    &\\text{Those ${maxErrs} equations agree, so these are the correct coefficients!} \\\\
+                    &\\text{We'll check the rest of the possibilities for completeness' sake.} \\\\
                 `
                     : `&\\text{Those don't agree, so these aren't the coefficients}`;
 
@@ -321,6 +324,11 @@ function App() {
             }
         }
 
+        const corrected = [...send];
+        for (let i = 0; i < pos.length; i++) {
+            corrected[pos[i]] = corrections[i];
+        }
+
         setDecOut(
             `
             \\begin{align}
@@ -335,16 +343,23 @@ function App() {
                         &\\text{so I'll just be using a simple trial-and-error method.}\\\\
                         &\\text{There are ${redundantCharacters} redundant characters, so we can fix at most ${maxErrs} errors.}\\\\
                         &\\text{We'll go through every possible combination of corrupted characters, and make them unknown.}\\\\
-                        &\\text{Then, we'll substitute each of our roots into the function, and we want the result to be 0.}\\\\
+                        &\\text{Then, we'll substitute each of our roots into the function, and we want the result of those to be 0.}\\\\
                         &\\text{This will give us ${gRoots.length} linear equations.}\\\\
                         &\\text{We'll use Gauss-Jordan elimination with ${maxErrs} of them to get values for our unknowns.}\\\\
                         &\\text{We'll substitute those values in the remaining polynomials and see if it works}\\\\
                         &\\text{If it does, we've fixed our message!}\\\\\\\\
-                        ${outs.join("\\\\\\\\")}\\\\
+                        ${outs.join("\\\\\\\\")}\\\\\\\\
                         ` +
                       (pos.length > 0
-                          ? `&\\text{So the errors were at positions ${pos}, which we'll correct to ${corrections}}`
-                          : "&\\text{too many errors}")
+                          ? `
+                                &\\text{So the errors were at positions } ${pos} \\text{, which we'll correct to } ${corrections}\\\\
+                                &\\text{So we should have received } ${corrected} \\text{,}\\\\
+                                &\\text{which translates to the message “${corrected
+                                    .slice(0, -redundantCharacters)
+                                    .map((x) => (x == 0 ? " " : String.fromCharCode(x + 96)))
+                                    .join("")}”}.
+                            `
+                          : "&\\text{We couldn't values for any coefficient, so there were more errors than we could handle}\\\\&\\text{We'll just have to scrap this message}")
                     : "&\\text{That seems to be true, so we can just use the received message as is!}") +
                 `\\end{align}`
         );
@@ -375,7 +390,8 @@ function App() {
                     by adding some amount of redundant characters to the message. This number is set
                     in advance for both the encoding and decoding side. This algorithm can correct 1
                     error for every 2 redundant characters. Since I don't use a very optimized
-                    method, I recommend keeping this number small (2 or 4)
+                    method, I recommend keeping this number small (2 or 4). Positions are 0-indexed
+                    (start at 0).
                 </p>
                 <form
                     className="flex flex-row gap-4"
@@ -414,7 +430,11 @@ function App() {
                         </MathJax>
 
                         <h2>Message to send:</h2>
-                        <p className="mb-2">Corrupt some of these numbers</p>
+                        <p className="mb-2">
+                            Corrupt some of these numbers. Since there are {redundantCharacters}{" "}
+                            redundant characters, our algorithm can fix up to{" "}
+                            {Math.floor(redundantCharacters / 2)} errors.
+                        </p>
                         <form
                             className="flex flex-row flex-wrap gap-4"
                             onSubmit={(e) => {

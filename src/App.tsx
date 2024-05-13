@@ -65,7 +65,7 @@ function App() {
             p(x)x^${redundantCharacters} &= ${polyText(pxs, {
             end: pxs.length - redundantCharacters,
         })} \\\\
-            &\\text{Create another polynomial with arbitrary, agreed upon roots of }${gRoots} \\\\
+            &\\text{Create another polynomial with arbitrary, predetermined roots of }${gRoots} \\\\
             g(x) &= ${gRoots.map((r) => (r == 0 ? "(x)" : `(x - ${r})`)).join("")} \\\\
                  &= ${polyText(g)} \\\\
                  \\\\
@@ -91,6 +91,8 @@ function App() {
         )}) + \\frac{${polyText(remainder)}}{${polyText(g)}}
 
             \\\\
+            &\\text{If we subtract the remainder from } p(x)x^${redundantCharacters} \\text{,} \\\\
+            &\\text{then that will be divisible by } g(x) \\text{, and thus will contain all roots of } g(x) \\\\
             &\\text{let } f(x) \\text{ be the polynomial we send} \\\\
             f(x) &= p(x)x^${redundantCharacters} - R \\\\
             &= (${polyText(pxs, { end: pxs.length - redundantCharacters })})-(${polyText(
@@ -135,13 +137,16 @@ function App() {
         };
     };
 
-    const polyText = (p: number[], options?: { sep?: string; start?: number; end?: number }) => {
+    const polyText = (
+        p: (number | string)[],
+        options?: { sep?: string; start?: number; end?: number }
+    ) => {
         const { sep, start, end } = options ?? {};
         return p
             .map((n, i) =>
                 (start && i < start) || (end && i >= end)
                     ? ""
-                    : (n >= 0 && i != (start ?? 0) ? "+" : "") +
+                    : ((typeof n === "string" || n >= 0) && i != (start ?? 0) ? "+" : "") +
                       (i == p.length - 1
                           ? n
                           : `${n == 1 ? "" : n == -1 ? "-" : n}x^{${
@@ -153,24 +158,108 @@ function App() {
 
     const decode = () => {
         const gAtF = [];
+        const maxErrs = Math.floor(redundantCharacters / 2);
+        const guessedPos: number[] = [];
+        const outs = [];
 
         for (const root of gRoots) {
             gAtF.push(evalPoly(send, root));
         }
 
-        setDecOut(`
+        for (let i = 0; i < maxErrs; i++) {
+            guessedPos.push(i);
+        }
+
+        if (gAtF.filter((x) => x != 0).length) {
+            while (guessedPos[0] <= send.length - maxErrs) {
+                let out = "";
+                const lEqns = [];
+                const unknownPoly = [...send];
+                const unknownPolyText: (string | number)[] = [...send];
+                const unknowns: string[] = [];
+
+                for (const i of guessedPos) {
+                    unknownPoly[i] = 0;
+                    unknownPolyText[i] = `c_{${i}}`;
+                    unknowns.push(`c_{${i}}`);
+                }
+                out += `
+                    &\\text{Guessing positions } ${guessedPos}\\\\
+                    f'(x) &= ${polyText(unknownPolyText)}\\\\
+                `;
+
+                for (const root of gRoots) {
+                    const result = evalPoly(unknownPoly, root);
+                    const coefficients = unknowns.map(
+                        (_, i) => root ** (send.length - guessedPos[i] - 1)
+                    );
+
+                    const unknownCoefficient = coefficients.map(
+                        (x, i) => `${x == 1 ? "" : x}${unknowns[i]}`
+                    );
+
+                    lEqns.push(-result);
+                    out += `
+                        f'(${root}) &= ${unknownCoefficient.join("+")} ${
+                        result >= 0 ? "+" : ""
+                    } ${result}\\\\
+                        0 &= ${unknownCoefficient.join("+")} ${result >= 0 ? "+" : ""} ${result}\\\\
+                        ${unknownCoefficient.join("+")} &= ${-result}\\\\
+                    `;
+                }
+
+                outs.push(out);
+                //temp
+                // guessedPos[0] = send.length - maxErrs;
+
+                const toMove = [];
+                let j = send.length - 1;
+                let i = guessedPos.length - 1;
+                for (; i >= 0; i--) {
+                    if (guessedPos[i] === j) {
+                        toMove.push(i);
+                        j--;
+                    } else {
+                        break;
+                    }
+                }
+                guessedPos[i]++;
+                for (let k = 0; k < toMove.length; k++) {
+                    guessedPos[toMove[k]] = guessedPos[i] + k + 1;
+                }
+            }
+        }
+
+        setDecOut(
+            `
             \\begin{align}
-                &\\text{If we received everything correctly, the roots of } g(x) \\text{ should still be in our polynomial} \\\\
-                ${gAtF} \\\\
-                ${gRoots}
-            \\end{align}
-        `);
+                &\\text{Received message} \\\\
+                f'(x) &= ${polyText(send)} \\\\
+                &\\text{If we received everything correctly, the roots } ${gRoots} \\text{ of } g(x) \\text{ should still be roots in our polynomial} \\\\
+                ${gAtF.map((n, i) => `g(${gRoots[i]}) &= ${n}`).join("\\\\")} \\\\
+        ` +
+                (gAtF.filter((x) => x != 0).length
+                    ? `&\\text{Our message was tampered with! Let's try fixing it.}\\\\
+                        &\\text{There are efficient algorithms for this, but those are outside the scope of this course,}\\\\ 
+                        &\\text{so I'll just be using a simple trial-and-error method.}\\\\
+                        &\\text{There are ${redundantCharacters} redundant characters, so we can fix at most ${maxErrs} errors.}\\\\
+                        &\\text{We'll go through every possible combination of corrupted characters, and make them unknown.}\\\\
+                        &\\text{Then, we'll substitute each of our roots into the function, and we want the result to be 0.}\\\\
+                        &\\text{This will give us ${gRoots.length} linear equations.}\\\\
+                        &\\text{We'll use Gauss-Jordan elimination with ${maxErrs} of them to get values for our unknowns.}\\\\
+                        &\\text{We'll substitute those values in the remaining polynomials and see if it works}\\\\
+                        &\\text{If it does, we've fixed our message!}\\\\\\\\
+                        ${outs.join("\\\\\\\\")}
+                        `
+                    : "&\\text{That seems to be true, so we can just use the received message as is!}") +
+                `\\end{align}`
+        );
     };
 
     const evalPoly = (p: number[], x: number) => {
         let sum = 0;
         for (let i = 0; i < p.length; i++) {
-            sum += p[i] * x ** (p.length - i);
+            sum += p[i] * x ** (p.length - i - 1);
         }
 
         return sum;
@@ -182,8 +271,17 @@ function App() {
                 <h1 className="mb-4">Reed Solomon Error Correction</h1>
                 <p className="mb-4">
                     This is a simulation of the Reed Solomon error correction method. It uses
-                    polynomial division, and is therefore a real-life example that relates to the
-                    course content.
+                    polynomials, and polynomial division, and is therefore a real-life example that
+                    relates to the course content.
+                </p>
+                <p className="mb-4">
+                    Problem: How can we add things to a wireless message, such that, if it gets
+                    tampered with, through, for example, interference, we can detect and correct
+                    those errors, without needing to send a copy of the message? We'll achieve this
+                    by adding some amount of redundant characters to the message. This number is set
+                    in advance for both the encoding and decoding side. This algorithm can correct 1
+                    error for every 2 redundant characters. Since I don't use a very optimized
+                    method, I recommend keeping this number small (2 or 4)
                 </p>
                 <form
                     className="flex flex-row gap-4"

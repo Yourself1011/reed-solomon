@@ -160,7 +160,7 @@ function App() {
         const gAtF = [];
         const maxErrs = Math.floor(redundantCharacters / 2);
         const guessedPos: number[] = [];
-        const outs = [];
+        const outs: string[] = [];
 
         for (const root of gRoots) {
             gAtF.push(evalPoly(send, root));
@@ -170,6 +170,8 @@ function App() {
             guessedPos.push(i);
         }
 
+        let pos: number[] = [];
+        let corrections: number[] = [];
         if (gAtF.filter((x) => x != 0).length) {
             while (guessedPos[0] <= send.length - maxErrs) {
                 let out = "";
@@ -188,11 +190,17 @@ function App() {
                     f'(x) &= ${polyText(unknownPolyText)}\\\\
                 `;
 
+                const c: number[][] = [];
+                const r: number[] = [];
+
                 for (const root of gRoots) {
                     const result = evalPoly(unknownPoly, root);
                     const coefficients = unknowns.map(
                         (_, i) => root ** (send.length - guessedPos[i] - 1)
                     );
+
+                    c.push(coefficients);
+                    r.push(-result);
 
                     const unknownCoefficient = coefficients.map(
                         (x, i) => `${x == 1 ? "" : x}${unknowns[i]}`
@@ -208,7 +216,90 @@ function App() {
                     `;
                 }
 
+                const gj = c.slice(0, maxErrs);
+
                 // Gauss-Jordan elimination
+                out += `
+                    &\\text{Gauss-Jordan elimination on the first ${maxErrs} equations}\\\\
+                `;
+
+                // going down
+                for (let i = 0; i < maxErrs; i++) {
+                    let div = 0;
+                    for (let j = 0; j < gj[i].length; j++) {
+                        if (gj[i][j] != 0) {
+                            div = gj[i][j];
+                            break;
+                        }
+                    }
+
+                    gj[i] = gj[i].map((x) => x / div);
+                    r[i] /= div;
+                    out += `
+                        &\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
+                            ${gj.map((x, j) => x.join("&") + "&" + r[j]).join("\\\\")}
+                        \\end{array} \\right]\\\\
+                    `;
+
+                    for (let j = i + 1; j < gj.length; j++) {
+                        const multi = gj[j][i];
+                        gj[j] = gj[j].map((x, k) => x - gj[i][k] * multi);
+                        r[j] -= r[i] * multi;
+                    }
+
+                    out += `
+                        &\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
+                            ${gj.map((x, j) => x.join("&") + "&" + r[j]).join("\\\\")}
+                        \\end{array} \\right]\\\\
+                    `;
+                }
+
+                // going up
+                for (let i = maxErrs - 1; i >= 0; i--) {
+                    for (let j = i - 1; j >= 0; j--) {
+                        const multi = gj[j][i];
+                        gj[j] = gj[j].map((x, k) => x - gj[i][k] * multi);
+                        r[j] -= r[i] * multi;
+                    }
+
+                    out += `
+                        &\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
+                            ${gj.map((x, j) => x.join("&") + "&" + r[j]).join("\\\\")}
+                        \\end{array} \\right]\\\\
+                    `;
+                }
+
+                out += `&\\text{Check with the other ${maxErrs} equations}\\\\`;
+                let works = true;
+
+                for (let i = maxErrs; i < gRoots.length; i++) {
+                    const res = c[i].reduce((a, b, i) => a + b * r[i], 0);
+                    const eq = res == r[i];
+                    if (!eq) works = false;
+                    out +=
+                        c[i].map((x, j) => `(${x})(${r[j]})`).join("+") +
+                        "&" +
+                        (eq ? "=" : "\\neq") +
+                        r[i] +
+                        "\\\\" +
+                        res +
+                        "&" +
+                        (eq ? "=" : "\\neq") +
+                        r[i] +
+                        "\\\\";
+                }
+
+                out += works
+                    ? `
+                    &\\text{Those ${maxErrs} equations agree, so these are the correct roots!} \\\\
+                    &\\text{We'll check the rest of the possibilities for completeness' sake} \\\\
+                `
+                    : `&\\text{Those don't agree, so these aren't the coefficients}`;
+
+                if (works) {
+                    pos = [...guessedPos];
+                    corrections = r.slice(0, maxErrs);
+                }
 
                 outs.push(out);
 
@@ -249,8 +340,11 @@ function App() {
                         &\\text{We'll use Gauss-Jordan elimination with ${maxErrs} of them to get values for our unknowns.}\\\\
                         &\\text{We'll substitute those values in the remaining polynomials and see if it works}\\\\
                         &\\text{If it does, we've fixed our message!}\\\\\\\\
-                        ${outs.join("\\\\\\\\")}
-                        `
+                        ${outs.join("\\\\\\\\")}\\\\
+                        ` +
+                      (pos.length > 0
+                          ? `&\\text{So the errors were at positions ${pos}, which we'll correct to ${corrections}}`
+                          : "&\\text{too many errors}")
                     : "&\\text{That seems to be true, so we can just use the received message as is!}") +
                 `\\end{align}`
         );

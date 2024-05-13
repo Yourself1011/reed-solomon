@@ -315,7 +315,9 @@ function App() {
                 {on ? (
                     <>
                         <h2>Encoding</h2>
-                        <MathJax className="mt-8 max-w-full">{out}</MathJax>
+                        <MathJax dynamic className="mt-8 max-w-full">
+                            {out}
+                        </MathJax>
 
                         <h2>Message to send:</h2>
                         <p className="mb-2">Corrupt some of these numbers</p>
@@ -355,7 +357,9 @@ function App() {
                 {sent ? (
                     <>
                         <h2>Decoding</h2>
-                        <MathJax className="mt-8 max-w-full">{decOut}</MathJax>
+                        <MathJax dynamic className="mt-8 max-w-full">
+                            {decOut}
+                        </MathJax>
                     </>
                 ) : null}
             </main>

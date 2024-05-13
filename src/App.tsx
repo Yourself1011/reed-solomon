@@ -208,9 +208,9 @@ function App() {
                     `;
                 }
 
+                // Gauss-Jordan elimination
+
                 outs.push(out);
-                //temp
-                // guessedPos[0] = send.length - maxErrs;
 
                 const toMove = [];
                 let j = send.length - 1;
@@ -293,7 +293,7 @@ function App() {
                     }}
                 >
                     <input
-                        className="p-4 w-96 rounded-full"
+                        className="p-4 w-96 rounded-full bg-gray-950"
                         placeholder="Message (only a-z, lowercase)"
                         value={message}
                         onChange={(e) =>
@@ -301,7 +301,7 @@ function App() {
                         }
                     />
                     <input
-                        className="p-4 w-64 rounded-full"
+                        className="p-4 w-64 rounded-full bg-gray-950"
                         placeholder="# of redundant characters"
                         value={redundantCharacters == 0 ? "" : redundantCharacters}
                         onChange={(e) => setRedundantCharacters(parseInt(e.target.value))}
@@ -330,7 +330,7 @@ function App() {
                             {send.map((n, i) => (
                                 <input
                                     className={`p-4 w-24 rounded-full ${
-                                        n != origSend[i] ? "bg-red-600" : ""
+                                        n != origSend[i] ? "bg-red-600" : "bg-gray-950"
                                     }`}
                                     key={i}
                                     value={n}

@@ -400,7 +400,8 @@ function App() {
                 <p className="mb-4">
                     This is a simulation of the Reed Solomon error correction method. It uses
                     polynomials, and polynomial division, and is therefore a real-life example that
-                    relates to the course content.
+                    relates to the course content. It also connects to another course, MCV4UI, as it
+                    uses Gauss-Jordan elimination.
                 </p>
                 <p className="mb-4">
                     Problem: How can we add things to a wireless message, such that, if it gets

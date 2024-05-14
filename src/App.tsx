@@ -510,6 +510,12 @@ function App() {
                         </MathJax>
                     </>
                 ) : null}
+                <a
+                    href="https://github.com/Yourself1011/reed-solomon"
+                    className="mt-8 block underline text-blue-600"
+                >
+                    Source
+                </a>
             </main>
         </>
     );

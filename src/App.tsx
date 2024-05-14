@@ -297,13 +297,13 @@ function App() {
                 out += works
                     ? `
                     &\\text{Those ${maxErrs} equations agree, so these are the correct coefficients!} \\\\
-                    &\\text{We'll check the rest of the possibilities for completeness' sake.} \\\\
                 `
                     : `&\\text{Those don't agree, so these aren't the coefficients}`;
 
                 if (works) {
                     pos = [...guessedPos];
                     corrections = r.slice(0, maxErrs);
+                    break;
                 }
 
                 outs.push(out);

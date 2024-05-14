@@ -300,13 +300,13 @@ function App() {
                 `
                     : `&\\text{Those don't agree, so these aren't the coefficients}`;
 
+                outs.push(out);
+
                 if (works) {
                     pos = [...guessedPos];
                     corrections = r.slice(0, maxErrs);
                     break;
                 }
-
-                outs.push(out);
 
                 const toMove = [];
                 let j = send.length - 1;

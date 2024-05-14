@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./App.css";
 import { MathJax } from "better-react-mathjax";
 
@@ -12,6 +12,8 @@ function App() {
     const [sent, setSent] = useState(false);
     const [decOut, setDecOut] = useState("");
     const [gRoots, setGRoots] = useState<number[]>([]);
+    const [loadingDecoder, setLoadingDecoder] = useState(false);
+    const [loadingEncoder, setLoadingEncoder] = useState(false);
 
     const encode = () => {
         const p = [];
@@ -258,7 +260,7 @@ function App() {
                 }
 
                 // going up
-                for (let i = maxErrs - 1; i >= 0; i--) {
+                for (let i = maxErrs - 1; i > 0; i--) {
                     for (let j = i - 1; j >= 0; j--) {
                         const multi = gj[j][i];
                         gj[j] = gj[j].map((x, k) => x - gj[i][k] * multi);
@@ -374,6 +376,23 @@ function App() {
         return sum;
     };
 
+    useEffect(() => {
+        if (loadingEncoder) {
+            encode();
+            setOn(true);
+            setSent(false);
+        }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loadingEncoder]);
+
+    useEffect(() => {
+        if (loadingDecoder) {
+            decode();
+            setSent(true);
+        }
+        //eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loadingDecoder]);
+
     return (
         <>
             <main className="p-8">
@@ -394,12 +413,10 @@ function App() {
                     (start at 0).
                 </p>
                 <form
-                    className="flex flex-row gap-4"
+                    className="flex flex-row gap-4 items-center"
                     onSubmit={(e) => {
                         e.preventDefault();
-                        encode();
-                        setOn(true);
-                        setSent(false);
+                        setLoadingEncoder(true);
                     }}
                 >
                     <input
@@ -420,12 +437,21 @@ function App() {
                     <button className="bg-blue-950 p-4 rounded-full" type="submit">
                         Go!
                     </button>
+                    <div
+                        className={`size-8 rounded-full border-gray-500 border-t-transparent border-4 animate-spin ${
+                            loadingEncoder ? "" : "hidden"
+                        }`}
+                    />
                 </form>
 
                 {on ? (
                     <>
                         <h2>Encoding</h2>
-                        <MathJax dynamic className="mt-8 max-w-full">
+                        <MathJax
+                            dynamic
+                            className="mt-8 max-w-full"
+                            onTypeset={() => setLoadingEncoder(false)}
+                        >
                             {out}
                         </MathJax>
 
@@ -436,11 +462,10 @@ function App() {
                             {Math.floor(redundantCharacters / 2)} errors.
                         </p>
                         <form
-                            className="flex flex-row flex-wrap gap-4"
+                            className="flex flex-row flex-wrap gap-4 items-center"
                             onSubmit={(e) => {
                                 e.preventDefault();
-                                decode();
-                                setSent(true);
+                                setLoadingDecoder(true);
                             }}
                         >
                             {send.map((n, i) => (
@@ -464,6 +489,11 @@ function App() {
                             <button className="bg-blue-950 p-4 rounded-full" type="submit">
                                 Send!
                             </button>
+                            <div
+                                className={`size-8 rounded-full border-gray-500 border-t-transparent border-4 animate-spin ${
+                                    loadingDecoder ? "" : "hidden"
+                                }`}
+                            />
                         </form>
                     </>
                 ) : null}
@@ -471,7 +501,11 @@ function App() {
                 {sent ? (
                     <>
                         <h2>Decoding</h2>
-                        <MathJax dynamic className="mt-8 max-w-full">
+                        <MathJax
+                            dynamic
+                            className="mt-8 max-w-full"
+                            onTypeset={() => setLoadingDecoder(false)}
+                        >
                             {decOut}
                         </MathJax>
                     </>

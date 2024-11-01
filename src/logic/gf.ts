@@ -1,7 +1,7 @@
 export class GFNumber {
     public value: number;
-    public static expTable = new Uint8Array(255 * 2).fill(0);
-    public static logTable = new Uint8Array(255).fill(0);
+    public static expTable = new Uint8Array(255 * 2 + 1).fill(0);
+    public static logTable = new Uint8Array(256).fill(0);
 
     constructor(n: number) {
         this.value = n;
@@ -49,6 +49,15 @@ export class GFNumber {
         if (b.value == 0) throw new RangeError("Division by zero");
         return this.expTable[255 + this.logTable[a.value] - this.logTable[b.value]]; // + 255 to stay within 0-512
     }
+
+    pow(x: number) {
+        this.value = GFNumber.pow(this, x);
+        return this;
+    }
+
+    static pow(b: GFNumber, x: number) {
+        return this.expTable[(this.logTable[b.value] * x + 255) % 255];
+    }
 }
 
 function expLogInit() {
@@ -56,7 +65,7 @@ function expLogInit() {
 
     GFNumber.expTable[0] = 1;
 
-    for (let i = 1; i < 255; i++) {
+    for (let i = 1; i < 256; i++) {
         GFNumber.expTable[i] = GFNumber.expTable[i - 1] << 1;
 
         if (GFNumber.expTable[i - 1] & 0b10000000) {

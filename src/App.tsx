@@ -5,6 +5,7 @@ import { GFNumber } from "./logic/gf";
 import { encode } from "./logic/encode";
 import { decode } from "./logic/decode";
 import { generateG } from "./logic/polyUtils";
+import GFCalc from "./components/GFCalc";
 
 function App() {
     const [on, setOn] = useState(false);
@@ -44,10 +45,7 @@ function App() {
             <main className="p-8">
                 <h1 className="mb-4">Reed Solomon Error Correction</h1>
                 <p className="mb-4">
-                    This is a simulation of the Reed Solomon error correction method. It uses
-                    polynomials, and polynomial division, and is therefore a real-life example that
-                    relates to the course content. It also connects to another course, MCV4UI, as it
-                    uses Gauss-Jordan elimination.
+                    This is a simulation of the Reed Solomon error correction method.
                 </p>
                 <p className="mb-4">
                     Problem: How can we add things to a wireless message, such that, if it gets
@@ -59,6 +57,16 @@ function App() {
                     method, I recommend keeping this number small (2 or 4). Positions are 0-indexed
                     (start at 0).
                 </p>
+                <p className="mb-4">
+                    Because we're working with computers, we don't want our numbers to get too
+                    large, since that means we need to send more data unnecessarily. To accomplish
+                    this, we will use a number system known as{" "}
+                    <MathJax inline>{"\\(GF(2^8)\\)"}</MathJax>, which keeps the results of all
+                    arithmetic operations between 0 and 256, meaning we can store it in a byte,
+                    while still following the basic rules of each operation. Here is a calculator
+                    for this number system.
+                </p>
+                <GFCalc />
                 <form
                     className="flex flex-row gap-4 items-center"
                     onSubmit={(e) => {
@@ -70,9 +78,7 @@ function App() {
                         className="p-4 w-96 rounded-full bg-gray-950"
                         placeholder="Message (only a-z, lowercase)"
                         value={message}
-                        onChange={(e) =>
-                            e.target.value.match("[^a-z ]") ? null : setMessage(e.target.value)
-                        }
+                        onChange={(e) => setMessage(e.target.value)}
                     />
                     <input
                         className="p-4 w-64 rounded-full bg-gray-950"

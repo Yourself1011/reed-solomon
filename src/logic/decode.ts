@@ -200,7 +200,7 @@ export const decode = (send: number[], redundantCharacters: number) => {
                             &\\text{So we should have received } ${corrected} \\text{,}\\\\
                             &\\text{which translates to the message “${corrected
                                 .slice(0, -redundantCharacters)
-                                .map((x) => (x == 0 ? " " : String.fromCharCode(x + 96)))
+                                .map((x) => String.fromCharCode(x))
                                 .join("")}”}.
                         `
                   : "&\\text{We couldn't values for any coefficient, so there were more errors than we could handle}\\\\&\\text{We'll just have to scrap this message}")

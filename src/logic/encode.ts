@@ -3,7 +3,7 @@ import { g, gRoots, polyLongDiv, polyText } from "./polyUtils";
 export const encode = (message: string, redundantCharacters: number): [number[], string] => {
     const p = [];
     for (const char of message) {
-        p.push(Math.max(char.charCodeAt(0) - 96, 0));
+        p.push(char.charCodeAt(0));
     }
     const pxs = [...p, ...Array(redundantCharacters).fill(0)];
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { MathJax } from "better-react-mathjax";
+import { GFNumber } from "./logic/gf";
 
 function App() {
     const [on, setOn] = useState(false);
@@ -14,6 +15,9 @@ function App() {
     const [gRoots, setGRoots] = useState<number[]>([]);
     const [loadingDecoder, setLoadingDecoder] = useState(false);
     const [loadingEncoder, setLoadingEncoder] = useState(false);
+
+    console.log(new GFNumber(21).mult(new GFNumber(93)).div(new GFNumber(93)));
+    // console.log(GFNumber.expTable[7]);
 
     const encode = () => {
         const p = [];

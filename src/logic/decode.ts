@@ -1,3 +1,4 @@
+import { GFNumber } from "./gf";
 import { evalPoly, gRoots, polyText } from "./polyUtils";
 
 export const decode = (send: number[], redundantCharacters: number) => {
@@ -5,9 +6,10 @@ export const decode = (send: number[], redundantCharacters: number) => {
     const maxErrs = Math.floor(redundantCharacters / 2);
     const guessedPos: number[] = [];
     const outs: string[] = [];
+    const rec = send.map((x) => new GFNumber(x));
 
     for (const root of gRoots) {
-        gAtF.push(evalPoly(send, root));
+        gAtF.push(evalPoly(rec, root));
     }
 
     for (let i = 0; i < maxErrs; i++) {
@@ -15,17 +17,17 @@ export const decode = (send: number[], redundantCharacters: number) => {
     }
 
     let pos: number[] = [];
-    let corrections: number[] = [];
-    if (gAtF.filter((x) => x != 0).length) {
-        while (guessedPos[0] <= send.length - maxErrs) {
+    let corrections: GFNumber[] = [];
+    if (gAtF.filter((x) => x.value != 0).length) {
+        while (guessedPos[0] <= rec.length - maxErrs) {
             let out = "";
             const lEqns = [];
-            const unknownPoly = [...send];
-            const unknownPolyText: (string | number)[] = [...send];
+            const unknownPoly = [...rec];
+            const unknownPolyText: (string | GFNumber)[] = [...rec];
             const unknowns: string[] = [];
 
             for (const i of guessedPos) {
-                unknownPoly[i] = 0;
+                unknownPoly[i] = new GFNumber(0);
                 unknownPolyText[i] = `c_{${i}}`;
                 unknowns.push(`c_{${i}}`);
             }
@@ -34,29 +36,31 @@ export const decode = (send: number[], redundantCharacters: number) => {
                 f'(x) &= ${polyText(unknownPolyText)}\\\\
             `;
 
-            const c: number[][] = [];
-            const r: number[] = [];
+            const c: GFNumber[][] = [];
+            const r: GFNumber[] = [];
 
             for (const root of gRoots) {
                 const result = evalPoly(unknownPoly, root);
-                const coefficients = unknowns.map(
-                    (_, i) => root ** (send.length - guessedPos[i] - 1)
+                const coefficients = unknowns.map((_, i) =>
+                    root.pow(rec.length - guessedPos[i] - 1)
                 );
 
                 c.push(coefficients);
-                r.push(-result);
+                r.push(result);
 
                 const unknownCoefficient = coefficients.map(
-                    (x, i) => `${x == 1 ? "" : x}${unknowns[i]}`
+                    (x, i) => `${x.value == 1 ? "" : x}${unknowns[i]}`
                 );
 
                 lEqns.push(-result);
                 out += `
                     f'(${root}) &= ${unknownCoefficient.join("+")} ${
-                    result >= 0 ? "+" : ""
+                    result.value >= 0 ? "+" : ""
                 } ${result}\\\\
-                    0 &= ${unknownCoefficient.join("+")} ${result >= 0 ? "+" : ""} ${result}\\\\
-                    ${unknownCoefficient.join("+")} &= ${-result}\\\\
+                    0 &= ${unknownCoefficient.join("+")} ${result.value >= 0 ? "+" : ""} ${
+                    result.value
+                }\\\\
+                    ${unknownCoefficient.join("+")} &= ${result.value}\\\\
                 `;
             }
 
@@ -72,16 +76,18 @@ export const decode = (send: number[], redundantCharacters: number) => {
 
             // going down
             for (let i = 0; i < maxErrs; i++) {
-                let div = 0;
+                let div = new GFNumber(0);
                 for (let j = 0; j < gj[i].length; j++) {
-                    if (gj[i][j] != 0) {
+                    if (gj[i][j].value != 0) {
                         div = gj[i][j];
                         break;
                     }
                 }
 
-                gj[i] = gj[i].map((x) => x / div);
-                r[i] /= div;
+                if (div.value == 0) continue;
+
+                gj[i] = gj[i].map((x) => x.div(div));
+                r[i] = r[i].div(div);
                 out += `
                     \\sim&\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
                         ${gj.map((x, j) => x.join("&") + "&" + r[j]).join("\\\\")}
@@ -90,8 +96,8 @@ export const decode = (send: number[], redundantCharacters: number) => {
 
                 for (let j = i + 1; j < gj.length; j++) {
                     const multi = gj[j][i];
-                    gj[j] = gj[j].map((x, k) => x - gj[i][k] * multi);
-                    r[j] -= r[i] * multi;
+                    gj[j] = gj[j].map((x, k) => x.sub(gj[i][k].mult(multi)));
+                    r[j] = r[j].sub(r[i].mult(multi));
                 }
 
                 out += `
@@ -105,8 +111,8 @@ export const decode = (send: number[], redundantCharacters: number) => {
             for (let i = maxErrs - 1; i > 0; i--) {
                 for (let j = i - 1; j >= 0; j--) {
                     const multi = gj[j][i];
-                    gj[j] = gj[j].map((x, k) => x - gj[i][k] * multi);
-                    r[j] -= r[i] * multi;
+                    gj[j] = gj[j].map((x, k) => x.sub(gj[i][k].mult(multi)));
+                    r[j] = r[j].sub(r[i].mult(multi));
                 }
 
                 out += `
@@ -120,8 +126,8 @@ export const decode = (send: number[], redundantCharacters: number) => {
             let works = true;
 
             for (let i = maxErrs; i < gRoots.length; i++) {
-                const res = c[i].reduce((a, b, i) => a + b * r[i], 0);
-                const eq = res == r[i];
+                const res = c[i].reduce((a, b, i) => a.add(b.mult(r[i])), new GFNumber(0));
+                const eq = res.value == r[i].value;
                 if (!eq) works = false;
                 out +=
                     c[i].map((x, j) => `(${x})(${r[j]})`).join("+") +
@@ -151,7 +157,7 @@ export const decode = (send: number[], redundantCharacters: number) => {
             }
 
             const toMove = [];
-            let j = send.length - 1;
+            let j = rec.length - 1;
             let i = guessedPos.length - 1;
             for (; i >= 0; i--) {
                 if (guessedPos[i] === j) {
@@ -168,7 +174,7 @@ export const decode = (send: number[], redundantCharacters: number) => {
         }
     }
 
-    const corrected = [...send];
+    const corrected = [...rec];
     for (let i = 0; i < pos.length; i++) {
         corrected[pos[i]] = corrections[i];
     }
@@ -177,7 +183,7 @@ export const decode = (send: number[], redundantCharacters: number) => {
         `
         \\begin{align}
             &\\text{Received message} \\\\
-            f'(x) &= ${polyText(send)} \\\\
+            f'(x) &= ${polyText(rec)} \\\\
             &\\text{If we received everything correctly, the roots } ${gRoots} \\text{ of } g(x) \\text{ should still be roots in our polynomial} \\\\
             ${gAtF.map((n, i) => `g(${gRoots[i]}) &= ${n}`).join("\\\\")} \\\\
     ` +
@@ -200,7 +206,7 @@ export const decode = (send: number[], redundantCharacters: number) => {
                             &\\text{So we should have received } ${corrected} \\text{,}\\\\
                             &\\text{which translates to the message “${corrected
                                 .slice(0, -redundantCharacters)
-                                .map((x) => String.fromCharCode(x))
+                                .map((x) => String.fromCharCode(x.value))
                                 .join("")}”}.
                         `
                   : "&\\text{We couldn't values for any coefficient, so there were more errors than we could handle}\\\\&\\text{We'll just have to scrap this message}")

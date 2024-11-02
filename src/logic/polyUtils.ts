@@ -52,10 +52,10 @@ export const polyText = (
         .join(sep ?? "");
 };
 
-export const evalPoly = (p: GFNumber[], x: number) => {
-    let sum = 0;
+export const evalPoly = (p: GFNumber[], x: GFNumber) => {
+    let sum = new GFNumber(0);
     for (let i = 0; i < p.length; i++) {
-        sum += GFNumber.mult(p[i], new GFNumber(x ** (p.length - i - 1))).value;
+        sum = sum.add(GFNumber.mult(p[i], x.pow(p.length - i - 1)));
     }
 
     return sum;

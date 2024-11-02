@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import "./App.css";
 import { MathJax } from "better-react-mathjax";
-import { GFNumber } from "./logic/gf";
 import { encode } from "./logic/encode";
 import { decode } from "./logic/decode";
 import { generateG } from "./logic/polyUtils";
@@ -34,7 +33,12 @@ function App() {
 
     useEffect(() => {
         if (loadingDecoder) {
-            setDecOut(decode(send, redundantCharacters));
+            setDecOut(
+                decode(
+                    send.map((x) => (isNaN(x) ? 32 : x)), // 32 is space
+                    redundantCharacters
+                )
+            );
             setSent(true);
         }
         //eslint-disable-next-line react-hooks/exhaustive-deps
@@ -68,7 +72,8 @@ function App() {
                 </p>
                 <GFCalc />
                 <p className="mb-4">
-                    Note that addition and subtraction do the same thing, and are therefore interchangeable
+                    Note that addition and subtraction do the same thing, and are therefore
+                    interchangeable
                 </p>
                 <form
                     className="flex flex-row gap-4 items-center"
@@ -107,14 +112,15 @@ function App() {
                             dynamic
                             className="mt-8 max-w-full"
                             onTypeset={() => setLoadingEncoder(false)}
-                        >
-                            {out}
-                        </MathJax>
+                            renderMode="pre"
+                            typesettingOptions={{ fn: "tex2chtml" }}
+                            text={out}
+                        />
 
                         <h2>Message to send:</h2>
                         <p className="mb-2">
-                            Corrupt some of these numbers. Since there are {redundantCharacters}{" "}
-                            redundant characters, our algorithm can fix up to{" "}
+                            Corrupt some of these numbers, but keep them below 256. Since there are{" "}
+                            {redundantCharacters} redundant characters, our algorithm can fix up to{" "}
                             {Math.floor(redundantCharacters / 2)} errors.
                         </p>
                         <form
@@ -131,13 +137,14 @@ function App() {
                                     }`}
                                     key={i}
                                     value={n}
-                                    onChange={(e) =>
-                                        setSend([
-                                            ...send.slice(0, i),
-                                            parseInt(e.target.value),
-                                            ...send.slice(i + 1),
-                                        ])
-                                    }
+                                    onChange={(e) => {
+                                        if (e.target.value == "" || parseInt(e.target.value) < 256)
+                                            setSend([
+                                                ...send.slice(0, i),
+                                                parseInt(e.target.value),
+                                                ...send.slice(i + 1),
+                                            ]);
+                                    }}
                                     type="number"
                                 ></input>
                             ))}
@@ -151,6 +158,10 @@ function App() {
                                 }`}
                             />
                         </form>
+                        <p className="my-4">
+                            Which translates to "
+                            {send.map((x) => String.fromCharCode(isNaN(x) ? 32 : x))}"
+                        </p>
                     </>
                 ) : null}
 
@@ -161,9 +172,10 @@ function App() {
                             dynamic
                             className="mt-8 max-w-full"
                             onTypeset={() => setLoadingDecoder(false)}
-                        >
-                            {decOut}
-                        </MathJax>
+                            renderMode="pre"
+                            typesettingOptions={{ fn: "tex2chtml" }}
+                            text={decOut}
+                        />
                     </>
                 ) : null}
                 <a

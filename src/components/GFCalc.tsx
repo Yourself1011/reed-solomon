@@ -2,9 +2,9 @@ import { useState } from "react";
 import { GFNumber } from "../logic/gf";
 
 export default function GFCalc() {
-    const [a, setA] = useState<number>(NaN);
+    const [a, setA] = useState<number | null>(null);
     const [opp, setOpp] = useState("+");
-    const [b, setB] = useState<number>(NaN);
+    const [b, setB] = useState<number | null>(null);
 
     return (
         <form
@@ -15,9 +15,13 @@ export default function GFCalc() {
                 className="p-4 w-24 rounded-full bg-gray-950"
                 value={a?.toString() ?? ""}
                 onChange={(e) =>
-                    parseInt(e.target.value) < 256 || !e.target.value
-                        ? setA(parseInt(e.target.value))
-                        : null
+                    setA(
+                        e.target.value == ""
+                            ? null
+                            : parseInt(e.target.value) < 256
+                            ? parseInt(e.target.value)
+                            : a
+                    )
                 }
                 type="number"
             />
@@ -36,14 +40,18 @@ export default function GFCalc() {
                 className="p-4 w-24 rounded-full bg-gray-950"
                 value={b?.toString() ?? ""}
                 onChange={(e) =>
-                    parseInt(e.target.value) < 256 || !e.target.value
-                        ? setB(parseInt(e.target.value))
-                        : null
+                    setB(
+                        e.target.value == ""
+                            ? null
+                            : parseInt(e.target.value) < 256
+                            ? parseInt(e.target.value)
+                            : b
+                    )
                 }
                 type="number"
             />
             <p>
-                {!isNaN(a) && !isNaN(b)
+                {a !== null && b !== null
                     ? "= " +
                       (() => {
                           const gfA = new GFNumber(a);

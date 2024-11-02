@@ -32,20 +32,19 @@ export const encode = (message: string, redundantCharacters: number): [number[],
     return [
         f,
         `
-        $$
         \\begin{align}
         \\require{enclose}
         &\\text{Message in numbers: }${p.join(", ")} \\\\
         &\\text{Create a polynomial with those numbers as coefficients} \\\\
         p(x) &= ${polyText(p)} \\\\
-        p(x)x^${redundantCharacters} &= ${polyText(pxs, {
+        p(x)x^{${redundantCharacters}} &= ${polyText(pxs, {
             end: pxs.length - redundantCharacters,
         })} \\\\
-        &\\text{Create another polynomial with arbitrary, predetermined roots of }${gRoots} \\\\
+        &\\text{Create another polynomial with predetermined power of two roots }${gRoots} \\\\
         g(x) &= ${gRoots.map((r) => (r.value == 0 ? "(x)" : `(x - ${r})`)).join("")} \\\\
              &= ${polyText(g)} \\\\
              \\\\
-             & \\text{Divide } p(x)x^${redundantCharacters} \\text{ by } g(x)
+             & \\text{Divide } p(x)x^{${redundantCharacters}} \\text{ by } g(x)
              \\\\
 
         \\begin{split}
@@ -62,21 +61,20 @@ export const encode = (message: string, redundantCharacters: number): [number[],
         \\end{split}
         
         \\\\\\\\
-        p(x)x^${redundantCharacters} &= (${polyText(quotient)})(${polyText(g)}) + \\frac{${polyText(
-            remainder
-        )}}{${polyText(g)}}
+        p(x)x^{${redundantCharacters}} &= (${polyText(quotient)})(${polyText(
+            g
+        )}) + \\frac{${polyText(remainder)}}{${polyText(g)}}
 
         \\\\
-        &\\text{If we subtract the remainder from } p(x)x^${redundantCharacters} \\text{,} \\\\
+        &\\text{If we subtract the remainder from } p(x)x^{${redundantCharacters}} \\text{,} \\\\
         &\\text{then that will be divisible by } g(x) \\text{, and thus will contain all roots of } g(x) \\\\
         &\\text{let } f(x) \\text{ be the polynomial we send} \\\\
-        f(x) &= p(x)x^${redundantCharacters} - R \\\\
+        f(x) &= p(x)x^{${redundantCharacters}} - R \\\\
         &= (${polyText(pxs, { end: pxs.length - redundantCharacters })})-(${polyText(
             remainder
         )}) \\\\
         &= ${polyText(f)}
         \\end{align}
-        $$
     `,
     ];
 };

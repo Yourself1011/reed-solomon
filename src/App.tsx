@@ -67,6 +67,9 @@ function App() {
                     for this number system.
                 </p>
                 <GFCalc />
+                <p className="mb-4">
+                    Note that addition and subtraction do the same thing, and are therefore interchangeable
+                </p>
                 <form
                     className="flex flex-row gap-4 items-center"
                     onSubmit={(e) => {

@@ -1,11 +1,12 @@
+import { GFNumber } from "./gf";
 import { g, gRoots, polyLongDiv, polyText } from "./polyUtils";
 
 export const encode = (message: string, redundantCharacters: number): [number[], string] => {
     const p = [];
     for (const char of message) {
-        p.push(char.charCodeAt(0));
+        p.push(new GFNumber(char.charCodeAt(0)));
     }
-    const pxs = [...p, ...Array(redundantCharacters).fill(0)];
+    const pxs = [...p, ...Array(redundantCharacters).fill(new GFNumber(0))];
 
     const { steps, diffs, quotient, remainder } = polyLongDiv(pxs, g);
 
@@ -26,7 +27,7 @@ export const encode = (message: string, redundantCharacters: number): [number[],
         })}\\\\`;
     }
 
-    const f = [...pxs.slice(0, -redundantCharacters), ...[...remainder].map((n) => -n)];
+    const f = [...pxs.slice(0, -redundantCharacters), ...[...remainder].map((n) => n)];
 
     return [
         f,
@@ -41,7 +42,7 @@ export const encode = (message: string, redundantCharacters: number): [number[],
             end: pxs.length - redundantCharacters,
         })} \\\\
         &\\text{Create another polynomial with arbitrary, predetermined roots of }${gRoots} \\\\
-        g(x) &= ${gRoots.map((r) => (r == 0 ? "(x)" : `(x - ${r})`)).join("")} \\\\
+        g(x) &= ${gRoots.map((r) => (r.value == 0 ? "(x)" : `(x - ${r})`)).join("")} \\\\
              &= ${polyText(g)} \\\\
              \\\\
              & \\text{Divide } p(x)x^${redundantCharacters} \\text{ by } g(x)

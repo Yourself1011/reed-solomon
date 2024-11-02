@@ -1,24 +1,28 @@
-export const polyLongDiv = (dividend: number[], divisor: number[]) => {
-    const steps: number[][] = [];
-    const diffs: number[][] = [];
+import { GFNumber } from "./gf";
+
+export const polyLongDiv = (dividend: GFNumber[], divisor: GFNumber[]) => {
+    const steps: GFNumber[][] = [];
+    const diffs: GFNumber[][] = [];
     const quotient = [];
 
-    let multi = Math.floor(dividend[0] / divisor[0]);
+    let multi = GFNumber.div(dividend[0], divisor[0]);
     quotient.push(multi);
     steps.push(
-        [...divisor].map((d) => d * multi).concat(Array(dividend.length - divisor.length).fill(0))
+        [...divisor]
+            .map((d) => d.mult(multi))
+            .concat(Array(dividend.length - divisor.length).fill(new GFNumber(0)))
     );
-    diffs.push([...dividend].map((n, i) => n - steps[steps.length - 1][i]));
+    diffs.push([...dividend].map((n, i) => n.sub(steps[steps.length - 1][i])));
 
     for (let i = 1; i < dividend.length - (divisor.length - 1); i++) {
-        multi = Math.floor(diffs[diffs.length - 1][i] / divisor[0]);
+        multi = GFNumber.div(diffs[diffs.length - 1][i], divisor[0]);
         quotient.push(multi);
         steps.push(
-            [...Array(i).fill(0), ...divisor]
-                .map((d) => d * multi)
+            [...Array(i).fill(new GFNumber(0)), ...divisor]
+                .map((d) => d.mult(multi))
                 .concat(Array(dividend.length - divisor.length - i).fill(0))
         );
-        diffs.push([...diffs[diffs.length - 1]].map((n, i) => n - steps[steps.length - 1][i]));
+        diffs.push([...diffs[diffs.length - 1]].map((n, i) => n.sub(steps[steps.length - 1][i])));
     }
 
     return {
@@ -30,7 +34,7 @@ export const polyLongDiv = (dividend: number[], divisor: number[]) => {
 };
 
 export const polyText = (
-    p: (number | string)[],
+    p: (GFNumber | string)[],
     options?: { sep?: string; start?: number; end?: number }
 ) => {
     const { sep, start, end } = options ?? {};
@@ -38,37 +42,38 @@ export const polyText = (
         .map((n, i) =>
             (start && i < start) || (end && i >= end)
                 ? ""
-                : ((typeof n === "string" || n >= 0) && i != (start ?? 0) ? "+" : "") +
+                : ((typeof n === "string" || n.valueOf() >= 0) && i != (start ?? 0) ? "+" : "") +
                   (i == p.length - 1
                       ? n
-                      : `${n == 1 ? "" : n == -1 ? "-" : n}x^{${
+                      : `${n.valueOf() == 1 ? "" : n.valueOf() == -1 ? "-" : n}x^{${
                             i == p.length - 2 ? "" : p.length - 1 - i
                         }}`)
         )
         .join(sep ?? "");
 };
 
-export const evalPoly = (p: number[], x: number) => {
+export const evalPoly = (p: GFNumber[], x: number) => {
     let sum = 0;
     for (let i = 0; i < p.length; i++) {
-        sum += p[i] * x ** (p.length - i - 1);
+        sum += GFNumber.mult(p[i], new GFNumber(x ** (p.length - i - 1))).value;
     }
 
     return sum;
 };
 
-export let g = [1];
-export let gRoots: number[] = [];
+export let g: GFNumber[] = [new GFNumber(1)];
+export let gRoots: GFNumber[] = [];
 
 export const generateG = (redundantCharacters: number) => {
-    g = [1];
+    g = [new GFNumber(1)];
     gRoots = [];
 
     for (let i = 0; i < redundantCharacters; i++) {
-        g.push(0);
+        g.push(new GFNumber(0));
+        const root = new GFNumber(2).pow(i);
         for (let j = g.length - 2; j >= 0; j--) {
-            g[j + 1] += g[j] * -(2 ** i);
+            g[j + 1] = g[j + 1].add(g[j].mult(root));
         }
-        gRoots.push(2 ** i);
+        gRoots.push(root);
     }
 };

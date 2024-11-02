@@ -11,52 +11,51 @@ export class GFNumber {
         return this.value;
     }
 
+    toString() {
+        return this.value.toString();
+    }
+
     add(x: GFNumber) {
-        this.value = GFNumber.add(this, x);
-        return this;
+        return GFNumber.add(this, x);
     }
 
     static add(a: GFNumber, b: GFNumber) {
-        return a.value ^ b.value;
+        return new GFNumber(a.value ^ b.value);
     }
 
     sub(x: GFNumber) {
-        this.value = GFNumber.sub(this, x);
-        return this;
+        return GFNumber.sub(this, x);
     }
 
     static sub(a: GFNumber, b: GFNumber) {
-        return a.value ^ b.value;
+        return new GFNumber(a.value ^ b.value);
     }
 
     mult(x: GFNumber) {
-        this.value = GFNumber.mult(this, x);
-        return this;
+        return GFNumber.mult(this, x);
     }
 
     static mult(a: GFNumber, b: GFNumber) {
-        if (a.value == 0 || b.value == 0) return 0;
-        return this.expTable[this.logTable[a.value] + this.logTable[b.value]];
+        if (a.value == 0 || b.value == 0) return new GFNumber(0);
+        return new GFNumber(this.expTable[this.logTable[a.value] + this.logTable[b.value]]);
     }
 
     div(x: GFNumber) {
-        this.value = GFNumber.div(this, x);
-        return this;
+        return GFNumber.div(this, x);
     }
 
     static div(a: GFNumber, b: GFNumber) {
-        if (a.value == 0) return 0;
+        if (a.value == 0) return new GFNumber(0);
         if (b.value == 0) throw new RangeError("Division by zero");
-        return this.expTable[255 + this.logTable[a.value] - this.logTable[b.value]]; // + 255 to stay within 0-512
+        return new GFNumber(this.expTable[255 + this.logTable[a.value] - this.logTable[b.value]]); // + 255 to stay within 0-51)
     }
 
     pow(x: number) {
-        this.value = GFNumber.pow(this, x);
-        return this;
+        return GFNumber.pow(this, x);
     }
 
     static pow(b: GFNumber, x: number) {
-        return this.expTable[(this.logTable[b.value] * x + 255) % 255];
+        return new GFNumber(this.expTable[(this.logTable[b.value] * x + 255) % 255]);
     }
 }
 

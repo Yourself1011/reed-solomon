@@ -52,10 +52,21 @@ export const polyText = (
         .join(sep ?? "");
 };
 
+// naive method
+// export const evalPoly = (p: GFNumber[], x: GFNumber) => {
+//     let sum = new GFNumber(0);
+//     for (let i = 0; i < p.length; i++) {
+//         sum = sum.add(GFNumber.mult(p[i], x.pow(p.length - i - 1)));
+//     }
+
+//     return sum;
+// };
+
+// horner's method
 export const evalPoly = (p: GFNumber[], x: GFNumber) => {
     let sum = new GFNumber(0);
     for (let i = 0; i < p.length; i++) {
-        sum = sum.add(GFNumber.mult(p[i], x.pow(p.length - i - 1)));
+        sum = sum.mult(x).add(p[i]);
     }
 
     return sum;

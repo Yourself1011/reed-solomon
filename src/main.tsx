@@ -11,6 +11,11 @@ const config: MathJax3Config = {
             width: "container",
         },
     },
+    loader: { load: ["[tex]/cancel"] },
+    tex: {
+        packages: { "[+]": ["cancel"] },
+        maxBuffer: 64 * 1024,
+    },
 };
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

@@ -1,182 +1,206 @@
 import { GFNumber } from "./gf";
-import { evalPoly, gRoots, polyText } from "./polyUtils";
+import { evalPoly, gRoots, polyLongDiv, polyMul, polyText } from "./polyUtils";
 
 export const decode = (send: number[], redundantCharacters: number) => {
-    const gAtF = [];
-    const maxErrs = Math.floor(redundantCharacters / 2);
-    const guessedPos: number[] = [];
-    const outs: string[] = [];
     const rec = send.map((x) => new GFNumber(x));
+    const syndromes = [];
+    let out = "";
 
     for (const root of gRoots) {
-        gAtF.push(evalPoly(rec, root));
+        syndromes.push(evalPoly(rec, root));
     }
 
-    for (let i = 0; i < maxErrs; i++) {
-        guessedPos.push(i);
-    }
+    const synPoly = [...syndromes];
+    synPoly.reverse();
 
-    let pos: number[] = [];
-    let corrections: GFNumber[] = [];
-    if (gAtF.filter((x) => x.value != 0).length) {
-        while (guessedPos[0] <= rec.length - maxErrs) {
-            let out = "";
-            const lEqns = [];
-            const unknownPoly = [...rec];
-            const unknownPolyText: (string | GFNumber)[] = [...rec];
-            const unknowns: string[] = [];
+    if (!syndromes.filter((x) => x.value != 0).length)
+        out += "&\\text{That seems to be true, so we can just use the received message as is!}";
+    else {
+        out += `
+            &\\text{Our message was tampered with! Let's try fixing it.}\\\\
+            \\\\
+            &\\text{We can write} \\\\
+            f'(x) &= f(x) + E(x) \\\\
+            &\\text{where } E(x) \\text{ is the error polynomial, such that} \\\\
+            E(x) &= Y_1x^{e_1}+Y_2x^{e_2}+\\dots+Y_vx^{e_v} \\\\
+            &\\text{where } Y_v \\text{ is how big the error at location } e_v \\text{ is and } v \\text{ is the number of errors} \\\\
+            &\\text{substituting roots of } g(x) \\text{ or } 2^i \\text{ yields} \\\\
+            f'(2^i) &= \\cancel{f(2^i)} 0 + E(2^i) \\\\
+            &=Y_12^{ie_1}+Y_22^{ie_2}+\\dots+Y_v2^{ie_v} \\\\
+            &=Y_1X_1^{i}+Y_2X_2^{i}+\\dots+Y_vX_3^{i} \\\\
+            &\\text{where } X_v = 2^{e_v} \\\\
+            \\\\
+            &\\text{We can convert the results of } f'(2^i) \\text{ to a polynomial}\\\\
+            S(x) &= ${polyText(synPoly)} \\\\
+            &\\text{Let's define 2 more polynomials} \\\\
+            \\Lambda(x) &= (1+2^{e_1}x)(1+2^{e_2}x)\\dots(1+2^{e_v}x) \\\\
+            &= (1+X_1x)(1+X_2x)\\dots(1+X_vx) \\\\
+            &= 1+\\Lambda_1x + \\dots + \\Lambda_vx^v \\\\
+            &\\text{Finding the roots } X_v^{-1} \\text{ of this will tell us where our errors are} \\\\
+            &\\text{and} \\\\
+            \\Omega(x) &= S(x)\\Lambda(x) \\mod x^{${redundantCharacters}} \\\\
+            &= S(x)\\Lambda(x) - Q(x)x^{${redundantCharacters}} \\\\
+            &\\text{giving us a polynomial no greater than degree } ${redundantCharacters} \\\\
+            \\\\
+            cQ(x)x^{${redundantCharacters}} + c\\Lambda(x)S(x) &= c\\Omega(x) \\\\
+            &\\text{where } c \\text{ is some arbitrary coefficient, is of the form} \\\\
+            ua + vb &= d \\\\
+            &\\text{so we can use the extended Euclidian algorithm that finds the greatest common divisor} \\\\\\\\
+        `;
 
-            for (const i of guessedPos) {
-                unknownPoly[i] = new GFNumber(0);
-                unknownPolyText[i] = `c_{${i}}`;
-                unknowns.push(`c_{${i}}`);
+        let a = [new GFNumber(1), ...Array(redundantCharacters).fill(new GFNumber(0))],
+            b = [...synPoly],
+            remainder,
+            v2 = [new GFNumber(0)],
+            v1 = [new GFNumber(1)],
+            v = [new GFNumber(1)];
+
+        do {
+            while (b[0].value == 0) b.shift();
+            const res = polyLongDiv(a, b);
+            remainder = res.remainder;
+            while (remainder[0].value == 0) remainder.shift();
+            const { steps, diffs, quotient } = res;
+
+            let polyFormatted = "";
+            for (let i = 0; i < steps.length; i++) {
+                polyFormatted += `${polyText(steps[i], {
+                    start: i,
+                    end: b.length + i,
+                    sep: "&",
+                })}\\\\
+                \\hline
+                ${polyText(diffs[i], {
+                    start: i,
+                    end: b.length + i + 1,
+                    sep: "&",
+                })}\\\\`;
             }
+
+            v = polyMul(quotient, v1).map((x, i, a) =>
+                x.add(v2[v2.length - (a.length - i)] ?? new GFNumber(0))
+            );
+
             out += `
-                &\\text{Guessing positions } ${guessedPos}\\\\
-                f'(x) &= ${polyText(unknownPolyText)}\\\\
+                \\begin{split}
+                    ${polyText(b)} ) 
+                    ${"\\\\".repeat(steps.length * 2.4)}
+                \\end{split}&
+                \\begin{split}
+                    \\begin{array}{@{}r}
+                    ${"&".repeat(b.length - 1) + polyText(quotient, { sep: "&" })} \\\\
+                    \\hline
+                    ${polyText(a, { sep: "&" })} \\\\
+                    ${polyFormatted}
+                    \\end{array}
+                \\end{split} \\\\
+                r &= ${polyText(remainder)} \\\\
+                v &= ${polyText(v2)} - (${polyText(v1)})(${polyText(quotient)}) \\\\
+                &= ${polyText(v)} \\\\\\\\
             `;
 
-            const c: GFNumber[][] = [];
-            const r: GFNumber[] = [];
+            v2 = [...v1];
+            v1 = [...v];
 
-            for (const root of gRoots) {
-                const result = evalPoly(unknownPoly, root);
-                const coefficients = unknowns.map((_, i) =>
-                    root.pow(rec.length - guessedPos[i] - 1)
-                );
+            a = [...b];
+            b = [...remainder];
+        } while (remainder.length > redundantCharacters / 2);
 
-                c.push(coefficients);
-                r.push(result);
+        const errMag = remainder.map((x) => x.div(v[v.length - 1])),
+            errLoc = v.map((x) => x.div(v[v.length - 1]));
 
-                const unknownCoefficient = coefficients.map(
-                    (x, i) => `${x.value == 1 ? "" : x}${unknowns[i]}`
-                );
+        out += `
+            c\\Omega(x) &= ${polyText(remainder)} \\\\
+            c\\Lambda(x) &= ${polyText(v)} \\\\
+            &\\text{since we know the constant term of } \\Lambda(x) \\text{ is } 1\\\\
+            c &= ${v[v.length - 1]} \\\\
+            \\Omega(x) &= ${polyText(errMag)} \\\\
+            \\Lambda(x) &= ${polyText(errLoc)} \\\\
+            \\\\
+            &\\text{Now that we know } \\Lambda(x) \\text{, we can find the values of } X_v \\\\
+            &\\text{Since } \\Lambda(X_v^{-1})=0 \\\\
+            &\\text{We can just brute-force (it had to happen somewhere) all possible values of } X_v^{-1}=2^{-e_v} \\\\
+            \\\\
+        `;
 
-                lEqns.push(-result);
+        const locations = [],
+            locationsInv = [],
+            magnitudes = [],
+            terms = [];
+        for (let i = 0; i < rec.length; i++) {
+            const exp = new GFNumber(2).pow(-i);
+            const res = evalPoly(errLoc, exp);
+
+            if (res.value != 0) {
+                out += `\\Lambda(2^{-${i}}) = \\Lambda(${exp}) &= ${res}\\\\`;
+            } else {
+                const x = exp.pow(-1);
+                locations.push(x);
+                locationsInv.push(exp);
+                terms.push(i);
                 out += `
-                    f'(${root}) &= ${unknownCoefficient.join("+")} ${
-                    result.value >= 0 ? "+" : ""
-                } ${result}\\\\
-                    0 &= ${unknownCoefficient.join("+")} ${result.value >= 0 ? "+" : ""} ${
-                    result.value
-                }\\\\
-                    ${unknownCoefficient.join("+")} &= ${result.value}\\\\
+                    \\Lambda(2^{-${i}}) = \\Lambda(${exp}) &= ${res} \\\\
+                    2^{-${i}} = X_{${locations.length}}^{-1} &= ${exp} \\\\
+                    2^{${i}} = X_{${locations.length}} &= ${x} \\\\
+                    &\\text{there is an error at term } ${i} \\\\
                 `;
-            }
-
-            const gj = c.slice(0, maxErrs);
-
-            // Gauss-Jordan elimination
-            out += `
-                &\\text{Gauss-Jordan elimination on the first ${maxErrs} equations}\\\\
-                &\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
-                    ${gj.map((x, j) => x.join("&") + "&" + r[j]).join("\\\\")}
-                \\end{array} \\right]\\\\
-            `;
-
-            // going down
-            for (let i = 0; i < maxErrs; i++) {
-                let div = new GFNumber(0);
-                for (let j = 0; j < gj[i].length; j++) {
-                    if (gj[i][j].value != 0) {
-                        div = gj[i][j];
-                        break;
-                    }
-                }
-
-                if (div.value == 0) continue;
-
-                gj[i] = gj[i].map((x) => x.div(div));
-                r[i] = r[i].div(div);
-                out += `
-                    \\sim&\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
-                        ${gj.map((x, j) => x.join("&") + "&" + r[j]).join("\\\\")}
-                    \\end{array} \\right]\\\\
-                `;
-
-                for (let j = i + 1; j < gj.length; j++) {
-                    const multi = gj[j][i];
-                    gj[j] = gj[j].map((x, k) => x.sub(gj[i][k].mult(multi)));
-                    r[j] = r[j].sub(r[i].mult(multi));
-                }
-
-                out += `
-                    \\sim&\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
-                        ${gj.map((x, j) => x.join("&") + "&" + r[j]).join("\\\\")}
-                    \\end{array} \\right]\\\\
-                `;
-            }
-
-            // going up
-            for (let i = maxErrs - 1; i > 0; i--) {
-                for (let j = i - 1; j >= 0; j--) {
-                    const multi = gj[j][i];
-                    gj[j] = gj[j].map((x, k) => x.sub(gj[i][k].mult(multi)));
-                    r[j] = r[j].sub(r[i].mult(multi));
-                }
-
-                out += `
-                    \\sim&\\left[ \\begin{array}{${"c".repeat(maxErrs)}|r} 
-                        ${gj.map((x, j) => x.join("&") + "&" + r[j]).join("\\\\")}
-                    \\end{array} \\right]\\\\
-                `;
-            }
-
-            out += `&\\text{Check with the other ${maxErrs} equations}\\\\`;
-            let works = true;
-
-            for (let i = maxErrs; i < gRoots.length; i++) {
-                const res = c[i].reduce((a, b, i) => a.add(b.mult(r[i])), new GFNumber(0));
-                const eq = res.value == r[i].value;
-                if (!eq) works = false;
-                out +=
-                    c[i].map((x, j) => `(${x})(${r[j]})`).join("+") +
-                    "&" +
-                    (eq ? "=" : "\\neq") +
-                    r[i] +
-                    "\\\\" +
-                    res +
-                    "&" +
-                    (eq ? "=" : "\\neq") +
-                    r[i] +
-                    "\\\\";
-            }
-
-            out += works
-                ? `
-                &\\text{Those ${maxErrs} equations agree, so these are the correct coefficients!} \\\\
-            `
-                : `&\\text{Those don't agree, so these aren't the coefficients}`;
-
-            outs.push(out);
-
-            if (works) {
-                pos = [...guessedPos];
-                corrections = r.slice(0, maxErrs);
-                break;
-            }
-
-            const toMove = [];
-            let j = rec.length - 1;
-            let i = guessedPos.length - 1;
-            for (; i >= 0; i--) {
-                if (guessedPos[i] === j) {
-                    toMove.push(i);
-                    j--;
-                } else {
-                    break;
-                }
-            }
-            guessedPos[i]++;
-            for (let k = 0; k < toMove.length; k++) {
-                guessedPos[toMove[k]] = guessedPos[i] + k + 1;
             }
         }
-    }
 
-    const corrected = [...rec];
-    for (let i = 0; i < pos.length; i++) {
-        corrected[pos[i]] = corrections[i];
+        if (locations.length == 0)
+            out +=
+                "&\\text{We couldn't find the error locations, which means there were more errors than we could handle. We have to scrap this message}";
+        else {
+            while (b[0].value == 0) b.shift();
+            const dErrLoc = errLoc.map((x, i) => ((errLoc.length - i) % 2 ? new GFNumber(0) : x));
+            dErrLoc.pop();
+            while (dErrLoc[0].value == 0) dErrLoc.shift();
+
+            out += `
+                \\\\
+                &\\text{Now we use the formula}\\\\
+                Y_v &= X_v \\frac{\\Omega(X_v^{-1})}{\\Lambda'(X_v^{-1})}\\\\
+                &\\text{where} \\\\
+                \\Lambda'(x) &= \\left( 1+\\Lambda_1x + \\dots + \\Lambda_vx^v \\right)' \\\\
+                &= \\Lambda_1 + 2 \\cdot \\Lambda_2x + \\dots + v \\cdot \\Lambda_vx^{v-1} \\\\
+                &\\text{Note that this is integer multiplication, instead of Galois Field multiplication,} \\\\
+                &\\text{so it's repeated Galois Field addition, and since addition and subtraction are the same in our Galois Field,} \\\\
+                &\\text{all even terms cancel out, and all odd terms get a coefficient of } 1 \\\\
+                \\Lambda'(x) &= \\Lambda_1 + \\Lambda_3x^2 + \\Lambda_5x^4 + \\dots \\\\
+                &= ${polyText(dErrLoc, { skipZero: true })} \\\\
+                \\\\
+            `;
+
+            const corrected = [...rec];
+            for (let i = 0; i < locations.length; i++) {
+                const mag = locations[i]
+                    .mult(evalPoly(errMag, locationsInv[i]))
+                    .div(evalPoly(dErrLoc, locationsInv[i]));
+                magnitudes.push(mag);
+                const index = corrected.length - terms[i] - 1;
+                corrected[index] = corrected[index].add(mag);
+
+                out += `
+                    Y_{${i + 1}} &= ${locations[i]} \\left( \\frac{${evalPoly(
+                    errMag,
+                    locationsInv[i]
+                )}}{${evalPoly(dErrLoc, locationsInv[i])}} \\right) \\\\
+                    &= ${mag} \\\\
+                `;
+            }
+
+            out += `
+                \\\\
+                &\\text{So the coefficients of terms } ${terms.join(", ")} \\\\
+                &\\text{ are off by } ${magnitudes.join(", ")} \\\\
+                &\\text{So the polynomial we should have received is } \\\\
+                f(x) &= ${polyText(corrected)} \\\\
+                &\\text{which translates to the message “${corrected
+                    .slice(0, -redundantCharacters)
+                    .map((x) => String.fromCharCode(x.value))
+                    .join("")}”}.
+            `;
+        }
     }
 
     return (
@@ -185,32 +209,9 @@ export const decode = (send: number[], redundantCharacters: number) => {
             &\\text{Received message} \\\\
             f'(x) &= ${polyText(rec)} \\\\
             &\\text{If we received everything correctly, the roots } ${gRoots} \\text{ of } g(x) \\text{ should still be roots in our polynomial} \\\\
-            ${gAtF.map((n, i) => `g(${gRoots[i]}) &= ${n}`).join("\\\\")} \\\\
+            ${syndromes.map((n, i) => `f'(${gRoots[i]}) &= ${n}`).join("\\\\")} \\\\
     ` +
-        (gAtF.filter((x) => x != 0).length
-            ? `&\\text{Our message was tampered with! Let's try fixing it.}\\\\
-                    &\\text{There are efficient algorithms for this, but those are outside the scope of this course,}\\\\ 
-                    &\\text{so I'll just be using a simple trial-and-error method.}\\\\
-                    &\\text{There are ${redundantCharacters} redundant characters, so we can fix at most ${maxErrs} errors.}\\\\
-                    &\\text{We'll go through every possible combination of corrupted characters, and make them unknown.}\\\\
-                    &\\text{Then, we'll substitute each of our roots into the function, and we want the result of those to be 0.}\\\\
-                    &\\text{This will give us ${gRoots.length} linear equations.}\\\\
-                    &\\text{We'll use Gauss-Jordan elimination with ${maxErrs} of them to get values for our unknowns.}\\\\
-                    &\\text{We'll substitute those values in the remaining polynomials and see if it works}\\\\
-                    &\\text{If it does, we've fixed our message!}\\\\\\\\
-                    ${outs.join("\\\\\\\\")}\\\\\\\\
-                    ` +
-              (pos.length > 0
-                  ? `
-                            &\\text{So the errors were at positions } ${pos} \\text{, which we'll correct to } ${corrections}\\\\
-                            &\\text{So we should have received } ${corrected} \\text{,}\\\\
-                            &\\text{which translates to the message “${corrected
-                                .slice(0, -redundantCharacters)
-                                .map((x) => String.fromCharCode(x.value))
-                                .join("")}”}.
-                        `
-                  : "&\\text{We couldn't values for any coefficient, so there were more errors than we could handle}\\\\&\\text{We'll just have to scrap this message}")
-            : "&\\text{That seems to be true, so we can just use the received message as is!}") +
+        out +
         `\\end{align}`
     );
 };

@@ -33,12 +33,12 @@ function App() {
 
     useEffect(() => {
         if (loadingDecoder) {
-            setDecOut(
-                decode(
-                    send.map((x) => (isNaN(x) ? 32 : x)), // 32 is space
-                    redundantCharacters
-                )
+            const out = decode(
+                send.map((x) => (isNaN(x) ? 32 : x)), // 32 is space
+                redundantCharacters
             );
+            setDecOut(out);
+            console.log(out.length);
             setSent(true);
         }
         //eslint-disable-next-line react-hooks/exhaustive-deps
@@ -57,9 +57,7 @@ function App() {
                     those errors, without needing to send a copy of the message? We'll achieve this
                     by adding some amount of redundant characters to the message. This number is set
                     in advance for both the encoding and decoding side. This algorithm can correct 1
-                    error for every 2 redundant characters. Since I don't use a very optimized
-                    method, I recommend keeping this number small (2 or 4). Positions are 0-indexed
-                    (start at 0).
+                    error for every 2 redundant characters. Positions are 0-indexed (start at 0).
                 </p>
                 <p className="mb-4">
                     Because we're working with computers, we don't want our numbers to get too

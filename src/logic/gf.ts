@@ -1,7 +1,9 @@
+const gf = 255;
+// const gf = 15;
 export class GFNumber {
     public value: number;
-    public static expTable = new Uint8Array(255 * 2 + 1).fill(0);
-    public static logTable = new Uint8Array(256).fill(0);
+    public static expTable = new Uint8Array(gf * 2).fill(0);
+    public static logTable = new Uint8Array(gf + 1).fill(0);
 
     constructor(n: number) {
         this.value = n;
@@ -47,7 +49,7 @@ export class GFNumber {
     static div(a: GFNumber, b: GFNumber) {
         if (a.value == 0) return new GFNumber(0);
         if (b.value == 0) throw new RangeError("Division by zero");
-        return new GFNumber(this.expTable[255 + this.logTable[a.value] - this.logTable[b.value]]); // + 255 to stay within 0-51)
+        return new GFNumber(this.expTable[gf + this.logTable[a.value] - this.logTable[b.value]]); // + gf to stay within 0-gf * 2 + 1)
     }
 
     pow(x: number) {
@@ -55,24 +57,26 @@ export class GFNumber {
     }
 
     static pow(b: GFNumber, x: number) {
-        return new GFNumber(this.expTable[(this.logTable[b.value] * x + 255) % 255]);
+        return new GFNumber(this.expTable[(((this.logTable[b.value] * x) % gf) + gf) % gf]);
     }
 }
 
 function expLogInit() {
-    const primePoly = 0b00011101;
+    const primePoly = 0b100011101;
+    // const primePoly = 0b10011;
 
     GFNumber.expTable[0] = 1;
+    GFNumber.expTable[gf] = 1;
 
-    for (let i = 1; i < 256; i++) {
+    for (let i = 1; i < gf; i++) {
         GFNumber.expTable[i] = GFNumber.expTable[i - 1] << 1;
 
-        if (GFNumber.expTable[i - 1] & 0b10000000) {
+        if (GFNumber.expTable[i - 1] & ((gf + 1) / 2)) {
             GFNumber.expTable[i] ^= primePoly;
         }
 
         GFNumber.logTable[GFNumber.expTable[i]] = i;
-        GFNumber.expTable[i + 255] = GFNumber.expTable[i];
+        GFNumber.expTable[i + gf] = GFNumber.expTable[i];
     }
 }
 

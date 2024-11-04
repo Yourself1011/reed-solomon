@@ -33,14 +33,26 @@ export const polyLongDiv = (dividend: GFNumber[], divisor: GFNumber[]) => {
     };
 };
 
+export const polyMul = (a: GFNumber[], b: GFNumber[]) => {
+    const res = Array(b.length - 1).fill(new GFNumber(0));
+    for (let i = 0; i < a.length; i++) {
+        for (let j = 0; j < b.length; j++) {
+            if (j == b.length - 1) res.push(a[i].mult(b[j]));
+            else res[i + j] = res[i + j].add(a[i].mult(b[j]));
+        }
+    }
+
+    return res;
+};
+
 export const polyText = (
     p: (GFNumber | string)[],
-    options?: { sep?: string; start?: number; end?: number }
+    options?: { sep?: string; start?: number; end?: number; skipZero?: boolean }
 ) => {
-    const { sep, start, end } = options ?? {};
+    const { sep, start, end, skipZero } = options ?? {};
     return p
         .map((n, i) =>
-            (start && i < start) || (end && i >= end)
+            (start && i < start) || (end && i >= end) || (skipZero && n.valueOf() == 0)
                 ? ""
                 : ((typeof n === "string" || n.valueOf() >= 0) && i != (start ?? 0) ? "+" : "") +
                   (i == p.length - 1

@@ -2,21 +2,22 @@ import { GFNumber } from "./gf";
 import { evalPoly, gRoots, polyLongDiv, polyMul, polyText } from "./polyUtils";
 
 export const decode = (send: number[], redundantCharacters: number) => {
-    const rec = send.map((x) => new GFNumber(x));
-    const syndromes = [];
-    let out = "";
+  const rec = send.map((x) => new GFNumber(x));
+  const syndromes = [];
+  let out = "";
 
-    for (const root of gRoots) {
-        syndromes.push(evalPoly(rec, root));
-    }
+  for (const root of gRoots) {
+    syndromes.push(evalPoly(rec, root));
+  }
 
-    const synPoly = [...syndromes];
-    synPoly.reverse();
+  const synPoly = [...syndromes];
+  synPoly.reverse();
 
-    if (!syndromes.filter((x) => x.value != 0).length)
-        out += "&\\text{That seems to be true, so we can just use the received message as is!}";
-    else {
-        out += `
+  if (!syndromes.filter((x) => x.value != 0).length)
+    out +=
+      "&\\text{That seems to be true, so we can just use the received message as is!}";
+  else {
+    out += `
             &\\text{Our message was tampered with! Let's try fixing it.}\\\\
             \\\\
             &\\text{We can write} \\\\
@@ -48,40 +49,43 @@ export const decode = (send: number[], redundantCharacters: number) => {
             &\\text{so we can use the extended Euclidian algorithm that finds the greatest common divisor} \\\\\\\\
         `;
 
-        let a = [new GFNumber(1), ...Array(redundantCharacters).fill(new GFNumber(0))],
-            b = [...synPoly],
-            remainder,
-            v2 = [new GFNumber(0)],
-            v1 = [new GFNumber(1)],
-            v = [new GFNumber(1)];
+    let a = [
+        new GFNumber(1),
+        ...Array(redundantCharacters).fill(new GFNumber(0)),
+      ],
+      b = [...synPoly],
+      remainder,
+      v2 = [new GFNumber(0)],
+      v1 = [new GFNumber(1)],
+      v = [new GFNumber(1)];
 
-        do {
-            while (b[0].value == 0) b.shift();
-            const res = polyLongDiv(a, b);
-            remainder = res.remainder;
-            while (remainder[0].value == 0) remainder.shift();
-            const { steps, diffs, quotient } = res;
+    do {
+      while (b[0].value == 0) b.shift();
+      const res = polyLongDiv(a, b);
+      remainder = res.remainder;
+      while (remainder[0].value == 0) remainder.shift();
+      const { steps, diffs, quotient } = res;
 
-            let polyFormatted = "";
-            for (let i = 0; i < steps.length; i++) {
-                polyFormatted += `${polyText(steps[i], {
-                    start: i,
-                    end: b.length + i,
-                    sep: "&",
-                })}\\\\
+      let polyFormatted = "";
+      for (let i = 0; i < steps.length; i++) {
+        polyFormatted += `${polyText(steps[i], {
+          start: i,
+          end: b.length + i,
+          sep: "&",
+        })}\\\\
                 \\hline
                 ${polyText(diffs[i], {
-                    start: i,
-                    end: b.length + i + 1,
-                    sep: "&",
+                  start: i,
+                  end: b.length + i + 1,
+                  sep: "&",
                 })}\\\\`;
-            }
+      }
 
-            v = polyMul(quotient, v1).map((x, i, a) =>
-                x.add(v2[v2.length - (a.length - i)] ?? new GFNumber(0))
-            );
+      v = polyMul(quotient, v1).map((x, i, a) =>
+        x.add(v2[v2.length - (a.length - i)] ?? new GFNumber(0)),
+      );
 
-            out += `
+      out += `
                 \\begin{split}
                     ${polyText(b)} ) 
                     ${"\\\\".repeat(steps.length * 2.4)}
@@ -99,17 +103,18 @@ export const decode = (send: number[], redundantCharacters: number) => {
                 &= ${polyText(v)} \\\\\\\\
             `;
 
-            v2 = [...v1];
-            v1 = [...v];
+      v2 = [...v1];
+      v1 = [...v];
 
-            a = [...b];
-            b = [...remainder];
-        } while (remainder.length > redundantCharacters / 2);
+      a = [...b];
+      b = [...remainder];
+    } while (remainder.length > redundantCharacters / 2);
+    // console.log(out);
 
-        const errMag = remainder.map((x) => x.div(v[v.length - 1])),
-            errLoc = v.map((x) => x.div(v[v.length - 1]));
+    const errMag = remainder.map((x) => x.div(v[v.length - 1])),
+      errLoc = v.map((x) => x.div(v[v.length - 1]));
 
-        out += `
+    out += `
             c\\Omega(x) &= ${polyText(remainder)} \\\\
             c\\Lambda(x) &= ${polyText(v)} \\\\
             &\\text{since we know the constant term of } \\Lambda(x) \\text{ is } 1\\\\
@@ -123,40 +128,42 @@ export const decode = (send: number[], redundantCharacters: number) => {
             \\\\
         `;
 
-        const locations = [],
-            locationsInv = [],
-            magnitudes = [],
-            terms = [];
-        for (let i = 0; i < rec.length; i++) {
-            const exp = new GFNumber(2).pow(-i);
-            const res = evalPoly(errLoc, exp);
+    const locations = [],
+      locationsInv = [],
+      magnitudes = [],
+      terms = [];
+    for (let i = 0; i < rec.length; i++) {
+      const exp = new GFNumber(2).pow(-i);
+      const res = evalPoly(errLoc, exp);
 
-            if (res.value != 0) {
-                out += `\\Lambda(2^{-${i}}) = \\Lambda(${exp}) &= ${res}\\\\`;
-            } else {
-                const x = exp.pow(-1);
-                locations.push(x);
-                locationsInv.push(exp);
-                terms.push(i);
-                out += `
+      if (res.value != 0) {
+        out += `\\Lambda(2^{-${i}}) = \\Lambda(${exp}) &= ${res}\\\\`;
+      } else {
+        const x = exp.pow(-1);
+        locations.push(x);
+        locationsInv.push(exp);
+        terms.push(i);
+        out += `
                     \\Lambda(2^{-${i}}) = \\Lambda(${exp}) &= ${res} \\\\
                     2^{-${i}} = X_{${locations.length}}^{-1} &= ${exp} \\\\
                     2^{${i}} = X_{${locations.length}} &= ${x} \\\\
                     &\\text{there is an error at term } ${i} \\\\
                 `;
-            }
-        }
+      }
+    }
 
-        if (locations.length == 0)
-            out +=
-                "&\\text{We couldn't find the error locations, which means there were more errors than we could handle. We have to scrap this message}";
-        else {
-            while (b[0].value == 0) b.shift();
-            const dErrLoc = errLoc.map((x, i) => ((errLoc.length - i) % 2 ? new GFNumber(0) : x));
-            dErrLoc.pop();
-            while (dErrLoc[0].value == 0) dErrLoc.shift();
+    if (locations.length == 0)
+      out +=
+        "&\\text{We couldn't find the error locations, which means there were more errors than we could handle. We have to scrap this message}";
+    else {
+      while (b[0].value == 0) b.shift();
+      const dErrLoc = errLoc.map((x, i) =>
+        (errLoc.length - i) % 2 ? new GFNumber(0) : x,
+      );
+      dErrLoc.pop();
+      while (dErrLoc[0].value == 0) dErrLoc.shift();
 
-            out += `
+      out += `
                 \\\\
                 &\\text{Now we use the formula}\\\\
                 Y_v &= X_v \\frac{\\Omega(X_v^{-1})}{\\Lambda'(X_v^{-1})}\\\\
@@ -171,47 +178,47 @@ export const decode = (send: number[], redundantCharacters: number) => {
                 \\\\
             `;
 
-            const corrected = [...rec];
-            for (let i = 0; i < locations.length; i++) {
-                const mag = locations[i]
-                    .mult(evalPoly(errMag, locationsInv[i]))
-                    .div(evalPoly(dErrLoc, locationsInv[i]));
-                magnitudes.push(mag);
-                const index = corrected.length - terms[i] - 1;
-                corrected[index] = corrected[index].add(mag);
+      const corrected = [...rec];
+      for (let i = 0; i < locations.length; i++) {
+        const mag = locations[i]
+          .mult(evalPoly(errMag, locationsInv[i]))
+          .div(evalPoly(dErrLoc, locationsInv[i]));
+        magnitudes.push(mag);
+        const index = corrected.length - terms[i] - 1;
+        corrected[index] = corrected[index].add(mag);
 
-                out += `
+        out += `
                     Y_{${i + 1}} &= ${locations[i]} \\left( \\frac{${evalPoly(
-                    errMag,
-                    locationsInv[i]
-                )}}{${evalPoly(dErrLoc, locationsInv[i])}} \\right) \\\\
+                      errMag,
+                      locationsInv[i],
+                    )}}{${evalPoly(dErrLoc, locationsInv[i])}} \\right) \\\\
                     &= ${mag} \\\\
                 `;
-            }
+      }
 
-            out += `
+      out += `
                 \\\\
                 &\\text{So the coefficients of terms } ${terms.join(", ")} \\\\
                 &\\text{ are off by } ${magnitudes.join(", ")} \\\\
                 &\\text{So the polynomial we should have received is } \\\\
                 f(x) &= ${polyText(corrected)} \\\\
                 &\\text{which translates to the message “${corrected
-                    .slice(0, -redundantCharacters)
-                    .map((x) => String.fromCharCode(x.value))
-                    .join("")}”}.
+                  .slice(0, -redundantCharacters)
+                  .map((x) => String.fromCharCode(x.value))
+                  .join("")}”}.
             `;
-        }
     }
+  }
 
-    return (
-        `
+  return (
+    `
         \\begin{align}
             &\\text{Received message} \\\\
             f'(x) &= ${polyText(rec)} \\\\
             &\\text{If we received everything correctly, the roots } ${gRoots} \\text{ of } g(x) \\text{ should still be roots in our polynomial} \\\\
             ${syndromes.map((n, i) => `f'(${gRoots[i]}) &= ${n}`).join("\\\\")} \\\\
     ` +
-        out +
-        `\\end{align}`
-    );
+    out +
+    `\\end{align}`
+  );
 };

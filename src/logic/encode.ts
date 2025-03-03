@@ -34,7 +34,7 @@ export const encode = (
 
   const f = [
     ...pxs.slice(0, -redundantCharacters),
-    ...[...remainder].map((n) => -n),
+    ...[...remainder].map((n) => n),
   ];
 
   return [

@@ -2,51 +2,51 @@ import { GFNumber } from "./gf";
 import { g, gRoots, polyLongDiv, polyText } from "./polyUtils";
 
 export const encode = (
-  message: string,
-  redundantCharacters: number,
+    message: string,
+    redundantCharacters: number,
 ): [number[], string] => {
-  const p = [];
-  for (const char of message) {
-    p.push(new GFNumber(char.charCodeAt(0)));
-  }
-  const pxs = [...p, ...Array(redundantCharacters).fill(new GFNumber(0))];
+    const p = [];
+    for (const char of message) {
+        p.push(new GFNumber(char.charCodeAt(0)));
+    }
+    const pxs = [...p, ...Array(redundantCharacters).fill(new GFNumber(0))];
 
-  const { steps, diffs, quotient, remainder } = polyLongDiv(pxs, g);
+    const { steps, diffs, quotient, remainder } = polyLongDiv(pxs, g);
 
-  let polyFormatted = "";
-  for (let i = 0; i < steps.length; i++) {
-    // steps[i] = steps[i].slice(i, p.length - g.length + i);
-    // diffs[i] = diffs[i].slice(i, p.length - g.length + i);
-    polyFormatted += `${polyText(steps[i], {
-      start: i,
-      end: g.length + i,
-      // end: pxs.length,
-      sep: "&",
-    })}\\\\
+    let polyFormatted = "";
+    for (let i = 0; i < steps.length; i++) {
+        // steps[i] = steps[i].slice(i, p.length - g.length + i);
+        // diffs[i] = diffs[i].slice(i, p.length - g.length + i);
+        polyFormatted += `${polyText(steps[i], {
+            start: i,
+            end: g.length + i,
+            // end: pxs.length,
+            sep: "&",
+        })}\\\\
         \\hline
         ${polyText(diffs[i], {
-          start: i,
-          end: g.length + i + 1,
-          // end: pxs.length,
-          sep: "&",
+            start: i,
+            end: g.length + i + 1,
+            // end: pxs.length,
+            sep: "&",
         })}\\\\`;
-  }
+    }
 
-  const f = [
-    ...pxs.slice(0, -redundantCharacters),
-    ...[...remainder].map((n) => n),
-  ];
+    const f = [
+        ...pxs.slice(0, -redundantCharacters),
+        ...[...remainder].map((n) => -n),
+    ];
 
-  return [
-    f,
-    `
+    return [
+        f,
+        `
         \\begin{align}
         \\require{enclose}
         &\\text{Message in numbers: }${p.join(", ")} \\\\
         &\\text{Create a polynomial with those numbers as coefficients} \\\\
         p(x) &= ${polyText(p)} \\\\
         p(x)x^{${redundantCharacters}} &= ${polyText(pxs, {
-          end: pxs.length - redundantCharacters,
+            end: pxs.length - redundantCharacters,
         })} \\\\
         &\\text{Create another polynomial with predetermined power of two roots }${gRoots} \\\\
         g(x) &= ${gRoots.map((r) => (r.value == 0 ? "(x)" : `(x - ${r})`)).join("")} \\\\
@@ -70,7 +70,7 @@ export const encode = (
         
         \\\\\\\\
         p(x)x^{${redundantCharacters}} &= (${polyText(quotient)})(${polyText(
-          g,
+            g,
         )}) + \\frac{${polyText(remainder)}}{${polyText(g)}}
 
         \\\\
@@ -79,10 +79,10 @@ export const encode = (
         &\\text{let } f(x) \\text{ be the polynomial we send} \\\\
         f(x) &= p(x)x^{${redundantCharacters}} - R \\\\
         &= (${polyText(pxs, { end: pxs.length - redundantCharacters })})-(${polyText(
-          remainder,
+            remainder,
         )}) \\\\
         &= ${polyText(f)}
         \\end{align}
     `,
-  ];
+    ];
 };

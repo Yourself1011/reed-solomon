@@ -22,7 +22,7 @@ export class GFNumber {
     }
 
     static add(a: GFNumber, b: GFNumber) {
-        return new GFNumber(a.value + b.value);
+        // return new GFNumber(a.value + b.value);
         return new GFNumber(a.value ^ b.value);
     }
 
@@ -31,7 +31,7 @@ export class GFNumber {
     }
 
     static sub(a: GFNumber, b: GFNumber) {
-        return new GFNumber(a.value - b.value);
+        // return new GFNumber(a.value - b.value);
         return new GFNumber(a.value ^ b.value);
     }
 
@@ -40,7 +40,7 @@ export class GFNumber {
     }
 
     static mult(a: GFNumber, b: GFNumber) {
-        return new GFNumber(a.value * b.value);
+        // return new GFNumber(a.value * b.value);
         if (a.value == 0 || b.value == 0) return new GFNumber(0);
         return new GFNumber(
             this.expTable[this.logTable[a.value] + this.logTable[b.value]],
@@ -52,7 +52,7 @@ export class GFNumber {
     }
 
     static div(a: GFNumber, b: GFNumber) {
-        return new GFNumber(a.value / b.value);
+        // return new GFNumber(a.value / b.value);
         // return new GFNumber(
         //     Math.round((a.value / b.value) * 10 ** 10) / 10 ** 10,
         // );
@@ -68,7 +68,7 @@ export class GFNumber {
     }
 
     static pow(b: GFNumber, x: number) {
-        return new GFNumber(b.value ** x);
+        // return new GFNumber(b.value ** x);
         return new GFNumber(
             this.expTable[(((this.logTable[b.value] * x) % gf) + gf) % gf],
         );

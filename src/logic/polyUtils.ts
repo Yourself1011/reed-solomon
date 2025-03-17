@@ -118,7 +118,7 @@ export const generateG = (redundantCharacters: number) => {
         g.push(new GFNumber(0));
         const root = new GFNumber(2).pow(i);
         for (let j = g.length - 2; j >= 0; j--) {
-            g[j + 1] = g[j + 1].add(g[j].mult(root.mult(new GFNumber(-1))));
+            g[j + 1] = g[j + 1].add(g[j].mult(root));
         }
         gRoots.push(root);
     }
